@@ -272,7 +272,7 @@ for bar in axes[0].patches:
     axes[0].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 50,
                  f"{int(bar.get_height()):,}", ha="center", va="bottom", fontsize=9)
 
-ct_by_cat_pct.plot(kind="bar", ax=axes[1], colormap="muted")
+ct_by_cat_pct.plot(kind="bar", ax=axes[1], colormap="tab10")
 axes[1].set_title("Comment type % by category")
 axes[1].set_xlabel("")
 axes[1].set_ylabel("Percentage (%)")
