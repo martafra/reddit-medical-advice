@@ -62,6 +62,7 @@ REDDIT_NOISE_WORDS = {
     "also", "really", "actually", "basically", "literally",
     "going", "got", "get", "know", "think", "feel", "want",
     "would", "could", "should", "might", "may",
+    "x200b", "x200", "amp", "nbsp",
 }
 
 
