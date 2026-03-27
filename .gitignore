@@ -1,0 +1,18 @@
+# Virtual environment
+venv/
+
+# Output data
+output/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+nohup.out
