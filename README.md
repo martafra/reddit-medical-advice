@@ -1,6 +1,6 @@
 # Medical Advice Reactions — Reddit NLP Corpus
 
-CS7NS6 Text Analytics - Group Project  
+CS7IS4 Text Analytics - Group Project  
 Trinity College Dublin, 2025/2026
 
 ## Overview

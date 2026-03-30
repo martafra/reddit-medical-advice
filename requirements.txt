@@ -1,7 +1,11 @@
 requests==2.32.3
 pandas==2.2.3
 python-dateutil==2.9.0
-pandas
-matplotlib
-seaborn
-nltk
+nltk==3.9.1
+tqdm==4.67.1
+matplotlib==3.10.1
+seaborn==0.13.2
+vaderSentiment==3.3.2
+gensim==4.3.3
+pyLDAvis==3.4.1
+scikit-learn==1.6.1

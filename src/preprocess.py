@@ -1,26 +1,18 @@
 """
-03_preprocess.py - Text Preprocessing for Reddit Medical Corpus
-CS7NS6 / Text Analytics - Group H
+Text Preprocessing for Reddit Medical Corpus
+CS7IS4 / Text Analytics - Group 10
 
-What this script does, step by step:
-  1. Loads the raw posts and comments CSVs
-  2. Cleans the text (removes URLs, special chars, Reddit formatting)
-  3. Lowercases everything
-  4. Tokenizes into words
-  5. Removes stopwords (standard English + custom Reddit noise words)
-  6. Lemmatizes tokens using WordNetLemmatizer
-  7. Saves two new CSVs with added columns:
+Steps:
+  1. Load raw posts and comments CSVs
+  2. Clean text (URLs, special chars, Reddit formatting)
+  3. Lowercase
+  4. Tokenize
+  5. Remove stopwords (English + Reddit-specific noise)
+  6. Lemmatize with WordNetLemmatizer
+  7. Save new CSVs with three added columns:
        - text_clean     : cleaned raw text (no URLs, no markdown, lowercased)
-       - text_processed : fully preprocessed text (joined tokens, ready for LDA/TF-IDF)
-       - tokens         : space-separated lemmatized tokens
-
-Why we keep both text_clean and text_processed:
-  - text_clean is good for sentiment analysis (VADER works better on readable text)
-  - text_processed is good for LDA and TF-IDF (bag-of-words style)
-
-Dependencies:
-  pip install pandas nltk tqdm
-  python -c "import nltk; nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
+       - text_processed : lemmatized tokens joined, ready for LDA/TF-IDF
+       - tokens         : same as text_processed
 """
 
 import re
@@ -36,12 +28,11 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
-# enable tqdm for pandas apply
 tqdm.pandas()
 
 
 # ---------------------------------------------------------------------------
-# CONFIGURATION - change paths here if needed
+# CONFIGURATION
 # ---------------------------------------------------------------------------
 POSTS_CSV    = "output/reddit_posts_20260324_080517.csv"
 COMMENTS_CSV = "output/reddit_comments_20260324_080517.csv"
@@ -49,8 +40,7 @@ OUTPUT_DIR   = Path("output")
 
 # ---------------------------------------------------------------------------
 # CUSTOM STOPWORDS
-# These are words that appear a lot on Reddit but carry no useful meaning
-# for our analysis - things like "edit", "reddit", "post", etc.
+# Words that show up a lot on Reddit but are useless for analysis
 # ---------------------------------------------------------------------------
 REDDIT_NOISE_WORDS = {
     "edit", "update", "tldr", "tl", "dr", "reddit", "post", "comment",
@@ -67,7 +57,7 @@ REDDIT_NOISE_WORDS = {
 
 
 # ---------------------------------------------------------------------------
-# DOWNLOAD NLTK RESOURCES (only if not already downloaded)
+# NLTK SETUP
 # ---------------------------------------------------------------------------
 def download_nltk_resources():
     resources = [
@@ -88,28 +78,23 @@ def download_nltk_resources():
 # TEXT CLEANING
 # ---------------------------------------------------------------------------
 def clean_text(text: str) -> str:
-    """
-    Removes noise from raw Reddit text while keeping the actual words.
-    We do this before tokenizing so the tokenizer sees clean input.
-    """
+    """Strips noise from raw Reddit text, keeps actual words."""
     if not isinstance(text, str) or not text.strip():
         return ""
 
-    # remove URLs - they're not useful for NLP analysis
     text = re.sub(r"http\S+|www\.\S+", "", text)
 
-    # remove Reddit markdown: **bold**, *italic*, ~~strikethrough~~, >quote
+    # Reddit markdown: **bold**, *italic*, ~~strikethrough~~, >quote
     text = re.sub(r"\*{1,2}(.*?)\*{1,2}", r"\1", text)
     text = re.sub(r"~~(.*?)~~", r"\1", text)
     text = re.sub(r"^>.*$", "", text, flags=re.MULTILINE)
 
-    # remove subreddit and user mentions like r/depression or u/username
+    # r/subreddit and u/username mentions
     text = re.sub(r"r/\w+|u/\w+", "", text)
 
-    # remove special characters but keep apostrophes (they're part of words)
+    # keep apostrophes (they're part of words like "I'm")
     text = re.sub(r"[^a-zA-Z0-9\s']", " ", text)
 
-    # collapse multiple spaces into one
     text = re.sub(r"\s+", " ", text).strip()
 
     return text.lower()
@@ -122,21 +107,14 @@ def preprocess_text(text: str,
                     stop_words: set,
                     lemmatizer: WordNetLemmatizer) -> tuple[str, str]:
     """
-    Takes a cleaned text string and returns:
-      - processed_text : space-joined lemmatized tokens (for LDA / TF-IDF)
-      - tokens_str     : same thing (kept separate for clarity in the CSV)
-
-    We only keep tokens that are:
-      - alphabetic (no numbers, no punctuation leftovers)
-      - longer than 2 characters (removes "it", "is", "a", etc.)
-      - not in our combined stopword list
+    Returns (processed_text, tokens_str) - space-joined lemmatized tokens.
+    Keeps only alphabetic tokens longer than 2 chars, not in stopwords.
     """
     if not text:
         return "", ""
 
     tokens = word_tokenize(text)
 
-    # filter and lemmatize
     filtered = []
     for token in tokens:
         if not token.isalpha():
@@ -160,10 +138,7 @@ def process_dataframe(df: pd.DataFrame,
                       stop_words: set,
                       lemmatizer: WordNetLemmatizer,
                       label: str) -> pd.DataFrame:
-    """
-    Applies the full preprocessing pipeline to a dataframe.
-    Adds three new columns: text_clean, text_processed, tokens.
-    """
+    """Runs the full pipeline on a dataframe, adds text_clean / text_processed / tokens."""
     log.info(f"Cleaning {label} text...")
     df["text_clean"] = df[text_col].progress_apply(clean_text)
 
@@ -175,7 +150,7 @@ def process_dataframe(df: pd.DataFrame,
     df["text_processed"] = results.apply(lambda x: x[0])
     df["tokens"]         = results.apply(lambda x: x[1])
 
-    # flag rows where preprocessing left us with almost nothing
+    # warn if a lot of docs ended up nearly empty after preprocessing
     empty_after = (df["text_processed"].str.split().str.len() < 3).sum()
     if empty_after > 0:
         log.warning(
@@ -192,7 +167,6 @@ def process_dataframe(df: pd.DataFrame,
 def main():
     download_nltk_resources()
 
-    # build combined stopword list
     english_stopwords = set(stopwords.words("english"))
     all_stopwords     = english_stopwords | REDDIT_NOISE_WORDS
     lemmatizer        = WordNetLemmatizer()
@@ -211,7 +185,7 @@ def main():
     posts.to_csv(posts_out, index=False, encoding="utf-8")
     log.info(f"  Saved to: {posts_out}")
 
-    # quick sanity check - show a before/after example
+    # quick before/after sanity check
     sample = posts[posts["text_processed"].str.len() > 10].iloc[0]
     log.info(f"\n  Example post before: {sample['text'][:120]}...")
     log.info(f"  Example post after:  {sample['text_processed'][:120]}...")

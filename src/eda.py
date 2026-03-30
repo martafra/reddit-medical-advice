@@ -1,6 +1,6 @@
 """
-eda.py - Exploratory Data Analysis for Reddit Medical Advice Corpus
-CS7NS6 / Text Analytics - Group H
+Exploratory Data Analysis for Reddit Medical Advice Corpus
+CS7IS4 / Text Analytics - Group 10
 
 Produces:
   - Console summary statistics
@@ -30,7 +30,7 @@ COMMENTS_CSV = "output/reddit_comments_20260324_080517.csv"
 PLOTS_DIR    = Path("output/eda_plots")
 REPORT_PATH  = Path("output/eda_summary.txt")
 
-# Medical conditions to track frequency
+# conditions to track in the text
 CONDITION_KEYWORDS = {
     "depression":        ["depression", "depressed", "depressive"],
     "anxiety":           ["anxiety", "anxious", "panic attack"],
@@ -85,7 +85,6 @@ info(f"Comment columns: {list(comments.columns)}")
 # ---------------------------------------------------------------------------
 section("1. BASIC STATISTICS")
 
-# Post length
 posts["text_len"]   = posts["text"].str.len()
 posts["word_count"] = posts["text"].str.split().str.len()
 
@@ -99,7 +98,6 @@ info(f"\nPost word count:")
 info(f"  mean:   {posts['word_count'].mean():.0f}")
 info(f"  median: {posts['word_count'].median():.0f}")
 
-# Comment length
 comments["text_len"]   = comments["text"].str.len()
 comments["word_count"] = comments["text"].str.split().str.len()
 
@@ -111,7 +109,6 @@ info(f"\nComment word count:")
 info(f"  mean:   {comments['word_count'].mean():.0f}")
 info(f"  median: {comments['word_count'].median():.0f}")
 
-# Score stats
 info(f"\nPost score - mean: {posts['score'].mean():.1f}, median: {posts['score'].median():.0f}")
 info(f"Comment score - mean: {comments['score'].mean():.1f}, median: {comments['score'].median():.0f}")
 
@@ -131,7 +128,6 @@ info(f"\nPosts per subreddit:")
 for sub, n in sub_dist.items():
     info(f"  {sub:<25} {n:>6,}")
 
-# Plot: posts per category
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 cat_dist.plot(kind="bar", ax=axes[0], color=sns.color_palette("muted", len(cat_dist)))
@@ -177,7 +173,6 @@ axes[1].legend()
 
 save_fig("02_text_length_distribution")
 
-# Word count by category
 fig, ax = plt.subplots(figsize=(10, 5))
 posts.boxplot(column="word_count", by="category", ax=ax,
               showfliers=False, patch_artist=True)
@@ -225,8 +220,8 @@ for condition, keywords in CONDITION_KEYWORDS.items():
     condition_counts[condition] = count
     info(f"  {condition:<25} {count:>6,}  ({count/len(posts)*100:.1f}%)")
 
-# Flag low-frequency conditions
-threshold = len(posts) * 0.01   # less than 1%
+# flag conditions that barely appear
+threshold = len(posts) * 0.01
 low_freq = [c for c, n in condition_counts.items() if n < threshold]
 if low_freq:
     info(f"\n[!] Conditions with frequency < 1% (consider removing): {low_freq}")
@@ -252,7 +247,7 @@ info(f"\nComment type distribution:")
 for ct, n in ct_dist.items():
     info(f"  {ct:<20} {n:>6,}  ({n/len(comments)*100:.1f}%)")
 
-# By category (join posts to get category)
+# join posts to get category per comment
 post_cats = posts[["post_id", "category"]].drop_duplicates()
 comments_with_cat = comments.merge(post_cats, on="post_id", how="left")
 ct_by_cat = comments_with_cat.groupby(["category", "comment_type"]).size().unstack(fill_value=0)
@@ -286,31 +281,26 @@ save_fig("06_comment_type_distribution")
 # ---------------------------------------------------------------------------
 section("7. INCONSISTENCY FLAGS")
 
-# Posts with very short text
 short_posts = posts[posts["word_count"] < 20]
 info(f"\nPosts with fewer than 20 words: {len(short_posts)} ({len(short_posts)/len(posts)*100:.1f}%)")
 
-# Authors with very many posts (potential bots)
+# authors with suspiciously many posts
 author_counts = posts["author"].value_counts()
 prolific = author_counts[author_counts > 50]
 info(f"Authors with more than 50 posts: {len(prolific)}")
 if len(prolific) > 0:
     info(f"  Top 5: {prolific.head().to_dict()}")
 
-# Duplicate posts
 dupes = posts["post_id"].duplicated().sum()
 info(f"Duplicate post_ids: {dupes}")
 
-# Duplicate comments
 dupes_c = comments["comment_id"].duplicated().sum()
 info(f"Duplicate comment_ids: {dupes_c}")
 
-# Posts with no comments in the dataset
 posts_with_comments = comments["post_id"].nunique()
 info(f"\nPosts with at least 1 comment in the dataset: {posts_with_comments:,} "
      f"({posts_with_comments/len(posts)*100:.1f}%)")
 
-# Comments per post
 comments_per_post = comments.groupby("post_id").size()
 info(f"Comments per post - mean: {comments_per_post.mean():.1f}, "
      f"median: {comments_per_post.median():.0f}, "

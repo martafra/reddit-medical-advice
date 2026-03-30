@@ -1,6 +1,6 @@
 """
-arctic_shift_collector.py - Reddit data collection via Arctic Shift API
-CS7NS6 / Text Analytics - Group H
+Reddit data collection via Arctic Shift API
+CS7IS4 / Text Analytics - Group 10
 
 Anti-timeout strategy:
   - The time range is split into windows of WINDOW_MONTHS months
@@ -14,7 +14,6 @@ Comment classification (for RQ2 - peer advice):
   - "general"      : all other comments
 
 API docs: https://github.com/ArthurHeitmann/arctic_shift/blob/master/api/README.md
-Dependencies: see requirements.txt
 """
 
 import requests
