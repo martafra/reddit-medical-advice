@@ -265,7 +265,6 @@ def main():
     log.info("  topic_words.csv           - top words per topic")
     log.info("  documents_with_topics.csv - each doc assigned to a topic")
     log.info("  lda_model.*               - saved model for visualisation")
-    log.info("\nNext step: run 06_clustering.py for K-Means clustering")
 
 
 if __name__ == "__main__":

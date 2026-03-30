@@ -300,7 +300,6 @@ def main():
     log.info("  empathy_score       - phrase count per 100 words")
     log.info("  lexical_density     - content word proportion (0 to 1)")
     log.info("  uncertainty_density - hedging word density per 100 words")
-    log.info("\nNext step: run 05_lda.py for topic modelling")
 
 
 if __name__ == "__main__":
