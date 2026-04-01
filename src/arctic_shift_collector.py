@@ -1,19 +1,18 @@
 """
-Reddit data collection via Arctic Shift API
-CS7IS4 / Text Analytics - Group 10
+01_collect.py - Reddit data collection via Arctic Shift API
+CS7NS6 / Text Analytics - Group H
 
-Anti-timeout strategy:
-  - The time range is split into windows of WINDOW_MONTHS months
-  - Each window makes small requests that do not time out
-  - Phrase filtering is applied locally after download
-  - Automatic retry on 422 errors
+Collects posts and comments via time-windowed requests to avoid API timeouts.
+Medical phrase filtering is done locally after download.
+Retries automatically on 422 errors.
 
-Comment classification (for RQ2 - peer advice):
-  - "peer_advice"  : commenter shares personal experience as advice
-  - "validation"   : commenter validates/confirms the medical advice received
-  - "general"      : all other comments
+Comment columns:
+  - is_op:        True if the comment author is the original post author
+  - is_top_level: True if direct reply to the post (parent_id starts with t3_)
+  - comment_type: peer_advice | validation | general | op_reply
 
 API docs: https://github.com/ArthurHeitmann/arctic_shift/blob/master/api/README.md
+Dependencies: see requirements.txt
 """
 
 import requests
@@ -22,7 +21,7 @@ import time
 import logging
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -33,7 +32,7 @@ log = logging.getLogger(__name__)
 # CONFIGURATION
 # ---------------------------------------------------------------------------
 API_BASE   = "https://arctic-shift.photon-reddit.com"
-OUTPUT_DIR = Path(__file__).parent.parent / "output"
+OUTPUT_DIR = Path("output")
 
 DATE_FROM      = "2019-01-01"
 DATE_TO        = "2024-12-31"
@@ -42,12 +41,12 @@ MAX_PER_WINDOW = 1000
 
 MIN_TEXT_LENGTH        = 50
 MAX_COMMENTS_PER_POST  = 100
-SLEEP_BETWEEN_REQUESTS = 1.0
+SLEEP_BETWEEN_REQUESTS = 1.5
 RETRY_ON_TIMEOUT       = 3
 RETRY_SLEEP            = 30
 
 # ---------------------------------------------------------------------------
-# KEY PHRASES - medical posts filter
+# MEDICAL POST KEY PHRASES
 # ---------------------------------------------------------------------------
 MEDICAL_PHRASES = [
     "doctor said",
@@ -80,16 +79,13 @@ MEDICAL_PHRASES = [
     "diagnosis was",
     "diagnosed me with",
     "referred me to",
-    "i too had",
-    "from my experience",
-    "when i had"
 ]
 
 # ---------------------------------------------------------------------------
 # COMMENT CLASSIFICATION PHRASES
+# Applied only to non-OP comments.
+# OP comments are handled separately as advice acceptance signals.
 # ---------------------------------------------------------------------------
-
-# Peer advice: commenter shares their own experience to help
 PEER_ADVICE_PHRASES = [
     "i went through the same",
     "same thing happened to me",
@@ -112,9 +108,12 @@ PEER_ADVICE_PHRASES = [
     "i dealt with the same",
     "i had a similar",
     "something similar happened to me",
+    "i can relate",
+    "same here",
+    "me too",
+    "i understand what you",
 ]
 
-# Validation: commenter confirms or challenges the medical advice
 VALIDATION_PHRASES = [
     "my doctor said the same",
     "that's what my doctor said",
@@ -134,7 +133,6 @@ VALIDATION_PHRASES = [
     "you should get another opinion",
 ]
 
-
 # ---------------------------------------------------------------------------
 # TARGET SUBREDDITS
 # ---------------------------------------------------------------------------
@@ -150,7 +148,7 @@ NON_MEDICAL_SUBREDDITS = {
 }
 
 POST_FIELDS    = "id,author,subreddit,title,selftext,score,num_comments,created_utc,url"
-COMMENT_FIELDS = "id,link_id,author,body,score,created_utc"
+COMMENT_FIELDS = "id,link_id,parent_id,author,body,score,created_utc"
 
 
 # ---------------------------------------------------------------------------
@@ -188,20 +186,26 @@ class RedditPost:
 class RedditComment:
     comment_id:   str
     post_id:      str
+    parent_id:    str        # t3_<post_id> = top-level, t1_<comment_id> = nested
     author:       str
     text:         str
     score:        int
     created_utc:  datetime
-    comment_type: str = "general"   # "peer_advice" | "validation" | "general"
+    is_op:        bool       # True if author == post author
+    is_top_level: bool       # True if direct reply to post
+    comment_type: str = "general"   # peer_advice | validation | general | op_reply
 
     def to_dict(self) -> dict:
         return {
             "comment_id":   self.comment_id,
             "post_id":      self.post_id,
+            "parent_id":    self.parent_id,
             "author":       self.author,
             "text":         self.text,
             "score":        self.score,
             "created_utc":  self.created_utc.isoformat(),
+            "is_op":        self.is_op,
+            "is_top_level": self.is_top_level,
             "comment_type": self.comment_type,
         }
 
@@ -282,14 +286,16 @@ def contains_medical_phrase(text: str) -> bool:
     return any(p in t for p in MEDICAL_PHRASES)
 
 
-def classify_comment(text: str) -> str:
+def classify_comment(text: str, is_op: bool) -> str:
     """
-    Classifies a comment into one of three types for RQ2 analysis:
-      - "peer_advice"  : commenter shares personal experience
-      - "validation"   : commenter confirms or challenges medical advice
-      - "general"      : no specific pattern detected
-    Priority: peer_advice > validation > general
+    Classifies a comment into one of four types:
+      - "op_reply"    : written by the original post author (advice acceptance context)
+      - "peer_advice" : non-OP sharing personal experience
+      - "validation"  : non-OP confirming or challenging medical advice
+      - "general"     : everything else
     """
+    if is_op:
+        return "op_reply"
     t = text.lower()
     if any(p in t for p in PEER_ADVICE_PHRASES):
         return "peer_advice"
@@ -425,10 +431,11 @@ def collect_nonmedical_posts(subreddit_name: str, category: str,
 
 
 # ---------------------------------------------------------------------------
-# COMMENT COLLECTION with classification
+# COMMENT COLLECTION - all comments, no phrase filter
 # ---------------------------------------------------------------------------
 def collect_comments(post: RedditPost,
                      limit: int = MAX_COMMENTS_PER_POST) -> list[RedditComment]:
+    """Fetches all comments for a post, no phrase filter. Sets is_op, is_top_level, comment_type."""
     params = {
         "link_id": post.post_id,
         "limit":   min(limit, 100),
@@ -439,22 +446,30 @@ def collect_comments(post: RedditPost,
     comments = []
 
     for item in raw[:limit]:
-        body   = (item.get("body")   or "").strip()
-        author = (item.get("author") or "").strip()
+        body      = (item.get("body")      or "").strip()
+        author    = (item.get("author")    or "").strip()
+        parent_id = (item.get("parent_id") or "").strip()
 
         if not body or body in ("[deleted]", "[removed]"):
             continue
         if author in ("[deleted]", "AutoModerator", ""):
             continue
 
+        is_op        = (author == post.author)
+        is_top_level = parent_id.startswith("t3_")
+        comment_type = classify_comment(body, is_op)
+
         comments.append(RedditComment(
             comment_id   = item.get("id", ""),
             post_id      = post.post_id,
+            parent_id    = parent_id,
             author       = author,
             text         = body,
             score        = item.get("score", 0),
             created_utc  = datetime.utcfromtimestamp(int(item.get("created_utc", 0))),
-            comment_type = classify_comment(body),   # <-- classificazione automatica
+            is_op        = is_op,
+            is_top_level = is_top_level,
+            comment_type = comment_type,
         ))
 
     time.sleep(SLEEP_BETWEEN_REQUESTS)
@@ -474,6 +489,7 @@ def run(collect_comments_flag: bool = True):
     log.info(f"Medical subreddits:      {total_subreddits} | "
              f"Non-medical: {sum(len(v) for v in NON_MEDICAL_SUBREDDITS.values())}")
     log.info(f"Time range: {DATE_FROM} → {DATE_TO} ({WINDOW_MONTHS}-month windows)")
+    log.info(f"Max comments per post:   {MAX_COMMENTS_PER_POST}")
 
     # ---- PHASE 1: medical posts ---------------------------------------------
     log.info("\n" + "=" * 55)
@@ -530,9 +546,14 @@ def run(collect_comments_flag: bool = True):
             comments = collect_comments(post)
             all_comments.extend(comments)
             if i % 100 == 0:
+                # show comment type breakdown every 100 posts
+                op_count  = sum(1 for c in all_comments if c.is_op)
+                pa_count  = sum(1 for c in all_comments if c.comment_type == "peer_advice")
+                val_count = sum(1 for c in all_comments if c.comment_type == "validation")
                 log.info(
-                    f"  comments: {i}/{len(all_posts)} posts processed | "
-                    f"comments collected: {len(all_comments)}"
+                    f"  {i}/{len(all_posts)} posts | "
+                    f"comments: {len(all_comments)} total | "
+                    f"op_reply: {op_count} | peer_advice: {pa_count} | validation: {val_count}"
                 )
 
     # ---- SAVING -------------------------------------------------------------
@@ -540,8 +561,8 @@ def run(collect_comments_flag: bool = True):
     comments_df = pd.DataFrame([c.to_dict() for c in all_comments])
 
     timestamp     = datetime.now().strftime("%Y%m%d_%H%M%S")
-    posts_path    = OUTPUT_DIR / f"reddit_posts_{timestamp}.csv"
-    comments_path = OUTPUT_DIR / f"reddit_comments_{timestamp}.csv"
+    posts_path    = OUTPUT_DIR / f"reddit_posts.csv"
+    comments_path = OUTPUT_DIR / f"reddit_comments.csv"
 
     posts_df.to_csv(posts_path,       index=False, encoding="utf-8")
     comments_df.to_csv(comments_path, index=False, encoding="utf-8")
@@ -573,6 +594,13 @@ def run(collect_comments_flag: bool = True):
         for ctype, count in cdist.items():
             pct = count / len(comments_df) * 100
             log.info(f"  {ctype:<20} {count:>6}  ({pct:.1f}%)")
+
+        op_comments = comments_df[comments_df["is_op"] == True]
+        log.info(f"\nOP reply comments:              {len(op_comments)} "
+                 f"({len(op_comments)/max(len(comments_df),1)*100:.1f}%)")
+        top_level = comments_df[comments_df["is_top_level"] == True]
+        log.info(f"Top-level comments:             {len(top_level)} "
+                 f"({len(top_level)/max(len(comments_df),1)*100:.1f}%)")
 
     log.info(f"\nFiles saved:")
     log.info(f"  {posts_path}")

@@ -25,8 +25,8 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-POSTS_CSV    = "output/reddit_posts_20260324_080517.csv"
-COMMENTS_CSV = "output/reddit_comments_20260324_080517.csv"
+POSTS_CSV    = "output/reddit_posts.csv"
+COMMENTS_CSV = "output/reddit_comments.csv"
 PLOTS_DIR    = Path("output/eda_plots")
 REPORT_PATH  = Path("output/eda_summary.txt")
 
