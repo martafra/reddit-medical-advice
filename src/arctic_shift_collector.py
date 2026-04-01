@@ -36,8 +36,8 @@ OUTPUT_DIR = Path("output")
 
 DATE_FROM      = "2019-01-01"
 DATE_TO        = "2024-12-31"
-WINDOW_MONTHS  = 3
-MAX_PER_WINDOW = 1000
+WINDOW_MONTHS  = 1
+MAX_PER_WINDOW = 2000
 
 MIN_TEXT_LENGTH        = 50
 MAX_COMMENTS_PER_POST  = 100
@@ -79,6 +79,10 @@ MEDICAL_PHRASES = [
     "diagnosis was",
     "diagnosed me with",
     "referred me to",
+    "my GP",
+    "my consultant",
+    "the specialist",
+    "my conunsellor"
 ]
 
 # ---------------------------------------------------------------------------
@@ -137,8 +141,8 @@ VALIDATION_PHRASES = [
 # TARGET SUBREDDITS
 # ---------------------------------------------------------------------------
 MEDICAL_SUBREDDITS = {
-    "chronic_mental":   ["depression", "anxiety", "bipolar", "OCD"],
-    "chronic_physical": ["diabetes", "cancer", "ChronicPain", "MultipleSclerosis"],
+    "chronic_mental":   ["depression", "anxiety", "bipolar", "OCD", "mentalhealth", "depression_help", "bipolarreddit"],
+    "chronic_physical": ["diabetes", "cancer", "ChronicPain", "MultipleSclerosis", "chronicillness", "lupus", "rheumatoid"],
     "acute_mental":     ["ptsd", "traumatoolbox"],
     "acute_physical":   ["medical", "AskDocs"],
 }
