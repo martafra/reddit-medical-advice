@@ -1,0 +1,14 @@
+H2: Correlations between sentiment and (text length, uncertainty) generalise to non-medical posts
+
+Feature: word_count
+  Medical:     r=-0.3024, p=0.0000
+  Non-medical: r=0.0262, p=0.0587
+  Fisher Z=-20.4311, p=0.0
+  Generalises: False
+
+Feature: uncertainty_density
+  Medical:     r=-0.0453, p=0.0000
+  Non-medical: r=0.0465, p=0.0008
+  Fisher Z=-5.5469, p=0.0
+  Generalises: False
+

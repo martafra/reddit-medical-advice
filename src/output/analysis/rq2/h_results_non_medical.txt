@@ -1,0 +1,35 @@
+H: Comments with shared-experience phrases have higher positive sentiment
+
+Corpus: non_medical
+n WITH shared experience:    106
+n WITHOUT shared experience: 5,112  (imbalance ratio 48:1)
+
+NOTE ON IMBALANCE
+-----------------
+The WITHOUT group is 48x larger than WITH.
+At this scale, p-values from full-data tests approach 0 even for
+negligible effect sizes. Full-data tests are reported for completeness
+but the primary verdict uses 500 bootstrapped size-matched
+comparisons (n=106 per group) and effect size thresholds.
+
+Sentiment Score Summary:
+  WITH    - mean=0.1698, median=0.7319, std=0.8772
+  WITHOUT - mean=0.1215, median=0.3210, std=0.7690
+
+Full-Data Tests (DESCRIPTIVE ONLY -- p inflated by large n):
+  Mann-Whitney U = 293798.0,  p = 6.8217e-02
+  Rank-biserial r = -0.0844
+  Cohen's d (full) = 0.0626
+
+Bootstrapped Size-Matched Tests (PRIMARY, 500 iterations, n=106 per group):
+  Median rank-biserial r  = -0.0854  (|r| > 0.1 small, > 0.3 medium, > 0.5 large)
+  Median Cohen's d        = 0.0597  (|d| > 0.2 small, > 0.5 medium, > 0.8 large)
+  Median Mann-Whitney p   = 0.1417
+  % trials significant    = 11.6%
+
+Verdict criteria:
+  (1) bootstrap median r_rb > 0.05  -> FAIL
+  (2) WITH mean > WITHOUT mean               -> PASS
+  (3) >= 70% bootstrap trials significant    -> FAIL (11.6%)
+
+Result: NOT SUPPORTED at alpha=0.05

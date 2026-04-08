@@ -1,0 +1,12 @@
+cluster_id,auto_name,top_words,manual_name
+0,prescribed_take_anyone,"prescribed, take, anyone, taking, day, anxiety, medication, doctor prescribed, experience, help, told, doctor said, week, dose, med",
+1,cancer_chemo_oncologist,"cancer, chemo, oncologist, tumor, stage, surgery, scan, treatment, radiation, lung, biopsy, doctor said, month, week, node",
+2,neurologist_mri_lesion,"neurologist, mri, lesion, symptom, brain, neurologist said, eye, diagnosed, year, vision, diagnosis, ocrevus, specialist, month, numbness",
+3,therapist_ocd_ptsd,"therapist, ocd, ptsd, therapist said, trauma, thought, therapy, therapist told, thing, told, anxiety, diagnosed, time, year, help",
+4,life_time_even,"life, time, even, thing, year, friend, people, one, day, much, never, help, told, make, work",
+5,sugar_diabetes_insulin,"sugar, diabetes, insulin, blood sugar, blood, diabetic, metformin, type, glucose, fasting, diet, eating, eat, meal, day",
+6,side effect_effect_side,"side effect, effect, side, prescribed, taking, medication, take, anyone, day, experience, dose, anxiety, week, med, year",
+7,lupus_rheumatologist_joint,"lupus, rheumatologist, joint, pain, ana, symptom, positive, test, joint pain, diagnosed, blood, rash, year, referred, back",
+8,pain_back_year,"pain, back, year, day, surgery, chronic, nerve, help, time, even, month, told, much, week, one",
+9,bipolar_psychiatrist_episode,"bipolar, psychiatrist, episode, manic, mood, depression, disorder, diagnosed bipolar, diagnosed, med, diagnosis, bipolar disorder, mania, medication, year",
+10,blood_test_pain,"blood, test, pain, day, normal, back, week, went, symptom, heart, time, year, chest, doctor said, month",

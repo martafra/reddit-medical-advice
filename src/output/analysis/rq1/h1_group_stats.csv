@@ -1,0 +1,5 @@
+severity,nature,n,mean_empathy,median_empathy,mean_sentiment
+acute,mental,599,0.0044,0.0,-0.4438
+acute,physical,1920,0.0006,0.0,-0.2652
+chronic,mental,3253,0.0046,0.0,-0.2683
+chronic,physical,6349,0.0029,0.0,-0.2257

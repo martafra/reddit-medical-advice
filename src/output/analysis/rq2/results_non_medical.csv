@@ -1,0 +1,2 @@
+corpus,n_with_shared_exp,n_without_shared_exp,imbalance_ratio,mean_sentiment_with,mean_sentiment_without,median_sentiment_with,median_sentiment_without,full_mann_whitney_u,full_mann_whitney_p,full_r_rb,full_cohens_d,bootstrap_n,bootstrap_sample_size,bootstrap_median_r_rb,bootstrap_median_cohens_d,bootstrap_median_mw_p,bootstrap_median_t_p,bootstrap_pct_sig_trials,hypothesis_supported
+non_medical,106,5112,48.2,0.1698,0.1215,0.7319,0.321,293798.0,0.068217,-0.0844,0.0626,500,106,-0.0854,0.0597,0.1417,0.5964,11.6,False

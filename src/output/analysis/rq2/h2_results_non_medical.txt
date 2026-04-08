@@ -1,0 +1,16 @@
+H2: uncertainty_density is negatively correlated with lexical_density in advice comments
+
+Corpus: non_medical  |  n = 5,218
+
+  uncertainty_density - mean=0.5286, std=0.6838
+  lexical_density     - mean=0.5836, std=0.0432
+
+Spearman Correlation:
+  r                       = 0.0183
+  p (two-tailed)          = 0.1868
+  p (one-tailed, r < 0)   = 0.9066
+  alpha                   = 0.05
+
+  |r| interpretation: > 0.1 small, > 0.3 medium, > 0.5 large
+
+Result: NOT SUPPORTED (r=positive, one-tailed p=>= alpha)

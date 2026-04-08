@@ -1,0 +1,4 @@
+metric,column,spearman_r,p_value,n,significant
+empathy_score,empathy_score,0.0117,0.2514,9602,False
+clarity_density,clarity_density,-0.0107,0.2928,9602,False
+accuracy_density,accuracy_density,-0.0267,0.009,9602,True

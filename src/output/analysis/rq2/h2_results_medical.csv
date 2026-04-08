@@ -1,0 +1,2 @@
+corpus,n,spearman_r,p_two_tailed,p_one_tailed_neg,mean_uncertainty,mean_lexical,hypothesis_supported
+medical,12121,-0.0106,0.2419,0.1209,0.6138,0.6197,False

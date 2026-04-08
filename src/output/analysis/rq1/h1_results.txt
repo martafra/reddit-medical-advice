@@ -1,0 +1,8 @@
+H1: Empathy phrase density higher in chronic (more severe) posts than acute posts
+
+Chronic: mean=0.0035, median=0.0000, n=9602
+Acute:   mean=0.0015, median=0.0000, n=2519
+Mann-Whitney U = 12135474.5
+p-value        = 0.0519  (one-tailed, chronic > acute)
+Effect size    = -0.0035  (rank-biserial r; |r| > 0.1 small, > 0.3 medium, > 0.5 large)
+Result         = NOT SUPPORTED at α=0.05

@@ -1,0 +1,7 @@
+H2: Empathy more strongly correlated with positive sentiment than clarity/accuracy (chronic posts)
+
+  empathy_score            : r=0.0117, p=0.2514 n.s.
+  clarity_density          : r=-0.0107, p=0.2928 n.s.
+  accuracy_density         : r=-0.0267, p=0.0090 *
+
+Result = SUPPORTED at α=0.05
