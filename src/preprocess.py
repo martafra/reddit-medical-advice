@@ -31,17 +31,17 @@ log = logging.getLogger(__name__)
 tqdm.pandas()
 
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 POSTS_CSV    = "output/reddit_posts.csv"
 COMMENTS_CSV = "output/reddit_comments.csv"
 OUTPUT_DIR   = Path("output")
 
-# ---------------------------------------------------------------------------
+# ---
 # CUSTOM STOPWORDS
 # Words that show up a lot on Reddit but are useless for analysis
-# ---------------------------------------------------------------------------
+# ---
 REDDIT_NOISE_WORDS = {
     "edit", "update", "tldr", "tl", "dr", "reddit", "post", "comment",
     "thread", "subreddit", "upvote", "downvote", "crosspost", "repost",
@@ -56,9 +56,9 @@ REDDIT_NOISE_WORDS = {
 }
 
 
-# ---------------------------------------------------------------------------
+# ---
 # NLTK SETUP
-# ---------------------------------------------------------------------------
+# ---
 def download_nltk_resources():
     resources = [
         ("tokenizers/punkt_tab", "punkt_tab"),
@@ -74,9 +74,9 @@ def download_nltk_resources():
             nltk.download(name, quiet=True)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # TEXT CLEANING
-# ---------------------------------------------------------------------------
+# ---
 def clean_text(text: str) -> str:
     """Strips noise from raw Reddit text, keeps actual words."""
     if not isinstance(text, str) or not text.strip():
@@ -100,9 +100,9 @@ def clean_text(text: str) -> str:
     return text.lower()
 
 
-# ---------------------------------------------------------------------------
+# ---
 # TOKENIZATION, STOPWORD REMOVAL, LEMMATIZATION
-# ---------------------------------------------------------------------------
+# ---
 def preprocess_text(text: str,
                     stop_words: set,
                     lemmatizer: WordNetLemmatizer) -> tuple[str, str]:
@@ -130,9 +130,9 @@ def preprocess_text(text: str,
     return joined, joined
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN PROCESSING FUNCTION
-# ---------------------------------------------------------------------------
+# ---
 def process_dataframe(df: pd.DataFrame,
                       text_col: str,
                       stop_words: set,
@@ -161,9 +161,9 @@ def process_dataframe(df: pd.DataFrame,
     return df
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN
-# ---------------------------------------------------------------------------
+# ---
 def main():
     download_nltk_resources()
 
@@ -201,20 +201,7 @@ def main():
     comments.to_csv(comments_out, index=False, encoding="utf-8")
     log.info(f"  Saved to: {comments_out}")
 
-    # --- SUMMARY ---
-    log.info("\n" + "=" * 55)
-    log.info("PREPROCESSING COMPLETE")
-    log.info("=" * 55)
-    log.info(f"Posts processed:    {len(posts):,}")
-    log.info(f"Comments processed: {len(comments):,}")
-    log.info(f"\nNew columns added to both files:")
-    log.info("  text_clean     - cleaned text, lowercase, no URLs/markdown")
-    log.info("                   (use this for VADER sentiment analysis)")
-    log.info("  text_processed - lemmatized tokens, stopwords removed")
-    log.info("                   (use this for LDA and TF-IDF)")
-    log.info("  tokens         - same as text_processed (explicit token column)")
-
-    log.info(f"\nOutput files:")
+    log.info(f"\nDone. Posts: {len(posts):,} | Comments: {len(comments):,}")
     log.info(f"  {posts_out}")
     log.info(f"  {comments_out}")
 

@@ -30,17 +30,17 @@ log = logging.getLogger(__name__)
 tqdm.pandas()
 
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 POSTS_CSV    = "output/reddit_posts_preprocessed.csv"
 COMMENTS_CSV = "output/reddit_comments_preprocessed.csv"
 OUTPUT_DIR   = Path("output")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # PHRASE LISTS
-# ---------------------------------------------------------------------------
+# ---
 
 SHARED_EXPERIENCE_PHRASES = [
     "same thing happened to me",
@@ -133,9 +133,9 @@ CONTENT_POS_TAGS = {"NN", "NNS", "NNP", "NNPS",   # nouns
                     "RB", "RBR", "RBS"}              # adverbs
 
 
-# ---------------------------------------------------------------------------
+# ---
 # NLTK SETUP
-# ---------------------------------------------------------------------------
+# ---
 def download_nltk_resources():
     for path, name in [
         ("tokenizers/punkt_tab", "punkt_tab"),
@@ -148,9 +148,9 @@ def download_nltk_resources():
             nltk.download(name, quiet=True)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # FEATURE FUNCTIONS
-# ---------------------------------------------------------------------------
+# ---
 
 vader = None  # set in main()
 
@@ -214,9 +214,9 @@ def uncertainty_density(text: str) -> float:
     return round((hits / word_count) * 100, 4)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # APPLY ALL FEATURES TO A DATAFRAME
-# ---------------------------------------------------------------------------
+# ---
 def compute_features(df: pd.DataFrame, text_col: str,
                      clean_col: str, label: str) -> pd.DataFrame:
     """
@@ -255,9 +255,9 @@ def compute_features(df: pd.DataFrame, text_col: str,
     return df
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN
-# ---------------------------------------------------------------------------
+# ---
 def main():
     global vader
     download_nltk_resources()
@@ -287,19 +287,8 @@ def main():
     comments.to_csv(comments_out, index=False, encoding="utf-8")
     log.info(f"\nComments saved to: {comments_out}")
 
-    # --- FINAL SUMMARY ---
-    log.info("\n" + "=" * 55)
-    log.info("FEATURE ENGINEERING COMPLETE")
-    log.info("=" * 55)
-    log.info(f"Posts:    {len(posts):,} rows → {posts_out}")
-    log.info(f"Comments: {len(comments):,} rows → {comments_out}")
-    log.info("\nNew columns added:")
-    log.info("  sentiment_score     - VADER compound (-1 to +1)")
-    log.info("  shared_experience   - binary flag (0/1), supports RQ2")
-    log.info("  advice_acceptance   - phrase count per 100 words")
-    log.info("  empathy_score       - phrase count per 100 words")
-    log.info("  lexical_density     - content word proportion (0 to 1)")
-    log.info("  uncertainty_density - hedging word density per 100 words")
+    log.info(f"\nDone. Posts: {len(posts):,} rows → {posts_out}")
+    log.info(f"     Comments: {len(comments):,} rows → {comments_out}")
 
 
 if __name__ == "__main__":

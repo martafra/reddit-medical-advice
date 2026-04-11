@@ -35,9 +35,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 POSTS_CSV    = "output/reddit_posts_features.csv"
 COMMENTS_CSV = "output/reddit_comments_features.csv"
 OUTPUT_DIR   = Path("output/lda")
@@ -50,9 +50,9 @@ WORKERS      = 3
 MIN_TOKENS = 5  # skip docs shorter than this after preprocessing
 
 
-# ---------------------------------------------------------------------------
+# ---
 # HELPERS
-# ---------------------------------------------------------------------------
+# ---
 def to_token_list(text: str) -> list[str]:
     """text_processed is space-separated - just split it back for gensim."""
     if not isinstance(text, str) or not text.strip():
@@ -163,14 +163,12 @@ def assign_topics(df: pd.DataFrame, model, corpus,
     return df
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN PIPELINE FOR ONE CORPUS
-# ---------------------------------------------------------------------------
+# ---
 def run_lda(df: pd.DataFrame, label: str, id_col: str, output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
-    log.info(f"\n{'='*55}")
-    log.info(f"LDA: {label} ({len(df):,} documents)")
-    log.info(f"{'='*55}")
+    log.info(f"\nLDA: {label} ({len(df):,} documents)")
 
     texts = df["text_processed"].apply(to_token_list).tolist()
 
@@ -224,9 +222,9 @@ def run_lda(df: pd.DataFrame, label: str, id_col: str, output_dir: Path):
     return df, final_model, dictionary
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN
-# ---------------------------------------------------------------------------
+# ---
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -253,18 +251,7 @@ def main():
     run_lda(comments,         "comments",         "comment_id", OUTPUT_DIR / "comments")
     run_lda(nonmedical_posts, "nonmedical_posts", "post_id",    OUTPUT_DIR / "nonmedical_posts")
 
-    log.info("\n" + "=" * 55)
-    log.info("LDA COMPLETE")
-    log.info("=" * 55)
-    log.info("Output folders:")
-    log.info("  output/lda/medical_posts/")
-    log.info("  output/lda/comments/")
-    log.info("  output/lda/nonmedical_posts/")
-    log.info("\nEach folder contains:")
-    log.info("  coherence_plot.png        - how we chose the topic count")
-    log.info("  topic_words.csv           - top words per topic")
-    log.info("  documents_with_topics.csv - each doc assigned to a topic")
-    log.info("  lda_model.*               - saved model for visualisation")
+    log.info("\nDone. Output in output/lda/{medical_posts,comments,nonmedical_posts}/")
 
 
 if __name__ == "__main__":

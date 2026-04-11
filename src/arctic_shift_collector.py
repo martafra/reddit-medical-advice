@@ -28,9 +28,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 API_BASE   = "https://arctic-shift.photon-reddit.com"
 OUTPUT_DIR = Path("output")
 
@@ -45,9 +45,9 @@ SLEEP_BETWEEN_REQUESTS = 1.5
 RETRY_ON_TIMEOUT       = 3
 RETRY_SLEEP            = 30
 
-# ---------------------------------------------------------------------------
+# ---
 # MEDICAL POST KEY PHRASES
-# ---------------------------------------------------------------------------
+# ---
 MEDICAL_PHRASES = [
     "doctor said",
     "doctor told me",
@@ -85,11 +85,11 @@ MEDICAL_PHRASES = [
     "my conunsellor"
 ]
 
-# ---------------------------------------------------------------------------
+# ---
 # COMMENT CLASSIFICATION PHRASES
 # Applied only to non-OP comments.
 # OP comments are handled separately as advice acceptance signals.
-# ---------------------------------------------------------------------------
+# ---
 PEER_ADVICE_PHRASES = [
     "i went through the same",
     "same thing happened to me",
@@ -137,9 +137,9 @@ VALIDATION_PHRASES = [
     "you should get another opinion",
 ]
 
-# ---------------------------------------------------------------------------
+# ---
 # TARGET SUBREDDITS
-# ---------------------------------------------------------------------------
+# ---
 MEDICAL_SUBREDDITS = {
     "chronic_mental":   ["depression", "anxiety", "bipolar", "OCD", "mentalhealth", "depression_help", "bipolarreddit"],
     "chronic_physical": ["diabetes", "cancer", "ChronicPain", "MultipleSclerosis", "chronicillness", "lupus", "rheumatoid"],
@@ -155,9 +155,9 @@ POST_FIELDS    = "id,author,subreddit,title,selftext,score,num_comments,created_
 COMMENT_FIELDS = "id,link_id,parent_id,author,body,score,created_utc"
 
 
-# ---------------------------------------------------------------------------
+# ---
 # DATA MODEL
-# ---------------------------------------------------------------------------
+# ---
 @dataclass
 class RedditPost:
     post_id:      str
@@ -214,9 +214,9 @@ class RedditComment:
         }
 
 
-# ---------------------------------------------------------------------------
+# ---
 # API CLIENT with retry
-# ---------------------------------------------------------------------------
+# ---
 def api_get(endpoint: str, params: dict) -> list[dict]:
     url = f"{API_BASE}{endpoint}"
     for attempt in range(1, RETRY_ON_TIMEOUT + 1):
@@ -240,9 +240,9 @@ def api_get(endpoint: str, params: dict) -> list[dict]:
     return []
 
 
-# ---------------------------------------------------------------------------
+# ---
 # TIME WINDOWS
-# ---------------------------------------------------------------------------
+# ---
 def time_windows(date_from: str, date_to: str, months: int):
     start = datetime.fromisoformat(date_from)
     end   = datetime.fromisoformat(date_to)
@@ -252,9 +252,9 @@ def time_windows(date_from: str, date_to: str, months: int):
         start = window_end
 
 
-# ---------------------------------------------------------------------------
+# ---
 # PAGINATION WITHIN A WINDOW
-# ---------------------------------------------------------------------------
+# ---
 def paginate_window(endpoint: str, base_params: dict,
                     window_start: str, window_end: str) -> list[dict]:
     all_results  = []
@@ -282,9 +282,9 @@ def paginate_window(endpoint: str, base_params: dict,
     return all_results
 
 
-# ---------------------------------------------------------------------------
+# ---
 # PHRASE FILTERS
-# ---------------------------------------------------------------------------
+# ---
 def contains_medical_phrase(text: str) -> bool:
     t = text.lower()
     return any(p in t for p in MEDICAL_PHRASES)
@@ -308,9 +308,9 @@ def classify_comment(text: str, is_op: bool) -> str:
     return "general"
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MEDICAL POST COLLECTION
-# ---------------------------------------------------------------------------
+# ---
 def collect_medical_posts(subreddit_name: str, category: str) -> list[RedditPost]:
     windows   = list(time_windows(DATE_FROM, DATE_TO, WINDOW_MONTHS))
     n_windows = len(windows)
@@ -363,15 +363,15 @@ def collect_medical_posts(subreddit_name: str, category: str) -> list[RedditPost
         )
 
     log.info(
-        f"  ✓ r/{subreddit_name}: {len(posts)} filtered posts out of {total_raw} total "
+        f"  r/{subreddit_name}: {len(posts)} filtered posts out of {total_raw} total "
         f"({len(posts)/max(total_raw,1)*100:.1f}%)"
     )
     return posts
 
 
-# ---------------------------------------------------------------------------
+# ---
 # NON-MEDICAL POST COLLECTION
-# ---------------------------------------------------------------------------
+# ---
 def collect_nonmedical_posts(subreddit_name: str, category: str,
                               medical_authors: set) -> list[RedditPost]:
     log.info(f"  r/{subreddit_name} - {len(medical_authors)} authors to search")
@@ -427,16 +427,16 @@ def collect_nonmedical_posts(subreddit_name: str, category: str,
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
     log.info(
-        f"  ✓ r/{subreddit_name}: {len(posts)} non-medical posts "
+        f"  r/{subreddit_name}: {len(posts)} non-medical posts "
         f"from {found_count}/{len(medical_authors)} authors "
         f"({found_count/max(len(medical_authors),1)*100:.1f}% active here)"
     )
     return posts
 
 
-# ---------------------------------------------------------------------------
+# ---
 # COMMENT COLLECTION - all comments, no phrase filter
-# ---------------------------------------------------------------------------
+# ---
 def collect_comments(post: RedditPost,
                      limit: int = MAX_COMMENTS_PER_POST) -> list[RedditComment]:
     """Fetches all comments for a post, no phrase filter. Sets is_op, is_top_level, comment_type."""
@@ -480,9 +480,9 @@ def collect_comments(post: RedditPost,
     return comments
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN PIPELINE
-# ---------------------------------------------------------------------------
+# ---
 def run(collect_comments_flag: bool = True):
     OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -495,10 +495,7 @@ def run(collect_comments_flag: bool = True):
     log.info(f"Time range: {DATE_FROM} → {DATE_TO} ({WINDOW_MONTHS}-month windows)")
     log.info(f"Max comments per post:   {MAX_COMMENTS_PER_POST}")
 
-    # ---- PHASE 1: medical posts ---------------------------------------------
-    log.info("\n" + "=" * 55)
-    log.info("PHASE 1: collecting MEDICAL posts")
-    log.info("=" * 55)
+    log.info("\nPhase 1: collecting medical posts")
 
     medical_posts = []
     sub_done      = 0
@@ -515,13 +512,10 @@ def run(collect_comments_flag: bool = True):
             )
 
     medical_authors = {p.author for p in medical_posts}
-    log.info(f"\n→ Unique authors in medical posts: {len(medical_authors)}")
+    log.info(f"\n{len(medical_authors)} unique authors in medical posts")
 
-    # ---- PHASE 2: non-medical posts -----------------------------------------
     total_nonmedical_subs = sum(len(v) for v in NON_MEDICAL_SUBREDDITS.values())
-    log.info("\n" + "=" * 55)
-    log.info("PHASE 2: collecting NON-MEDICAL posts (same authors)")
-    log.info("=" * 55)
+    log.info("\nPhase 2: collecting non-medical posts (same authors)")
 
     nonmedical_posts = []
     sub_done2        = 0
@@ -539,12 +533,9 @@ def run(collect_comments_flag: bool = True):
 
     all_posts = medical_posts + nonmedical_posts
 
-    # ---- PHASE 3: comments --------------------------------------------------
     all_comments = []
     if collect_comments_flag:
-        log.info("\n" + "=" * 55)
-        log.info(f"PHASE 3: collecting comments ({len(all_posts)} posts)")
-        log.info("=" * 55)
+        log.info(f"\nPhase 3: collecting comments ({len(all_posts)} posts)")
 
         for i, post in enumerate(all_posts, 1):
             comments = collect_comments(post)
@@ -571,13 +562,10 @@ def run(collect_comments_flag: bool = True):
     posts_df.to_csv(posts_path,       index=False, encoding="utf-8")
     comments_df.to_csv(comments_path, index=False, encoding="utf-8")
 
-    # ---- FINAL STATISTICS ---------------------------------------------------
     nonmedical_authors = {p.author for p in nonmedical_posts}
     crossover          = medical_authors & nonmedical_authors
 
-    log.info("\n" + "=" * 55)
-    log.info("COLLECTION COMPLETE")
-    log.info("=" * 55)
+    log.info("\nCollection complete:")
     log.info(f"Medical posts:                    {len(medical_posts)}")
     log.info(f"Non-medical posts:                {len(nonmedical_posts)}")
     log.info(f"Total posts:                      {len(posts_df)}")
