@@ -1,3 +1,0 @@
-feature,medical_r,nonmedical_r,fisher_z,fisher_p,same_direction,both_significant,generalises
-word_count,-0.3024,0.0262,-20.4311,0.0,False,False,False
-uncertainty_density,-0.0453,0.0465,-5.5469,0.0,False,True,False
