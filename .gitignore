@@ -2,7 +2,7 @@
 venv/
 
 # Output data
-# output/
+output/
 
 # Python cache
 __pycache__/
