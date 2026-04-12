@@ -281,16 +281,16 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     RQ1: How does the nature and severity of medical conditions influence
          how the patient reacts to the received advice?
 
-    H1: Posts about more severe conditions (chronic) will show a higher
-        prevalence of empathy and emotional support phrases than posts
-        about less severe conditions (acute).
-        Test: Mann-Whitney U on empathy_score (chronic vs acute).
+    H1: Patients with chronic conditions will show lower sentiment scores
+        when describing received medical advice compared to posts from
+        acute condition subreddits.
+        Test: Mann-Whitney U on sentiment_score (chronic < acute).
 
-    H2: In severe (chronic) conditions, the empathy of the response will
-        be more strongly correlated with positive sentiment than clarity
-        or accuracy language.
+    H2: In chronic condition posts, patients will show a stronger preference
+        for empathetic communication over technical accuracy when describing
+        their interaction with medical professionals.
         Test: Spearman correlations within chronic posts, compared across
-        the three metrics.
+        the three metrics (empathy, clarity, accuracy).
 
     Input columns used (from features.py + extra):
       category, empathy_score, sentiment_score (or vader_compound),
@@ -329,19 +329,19 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         return
 
     # ─────────────────────────────────────────────────────────────────────────
-    # H1: Empathy density  –  chronic vs acute
+    # H1: Sentiment score  –  chronic vs acute (chronic expected lower)
     # ─────────────────────────────────────────────────────────────────────────
-    log.info("\n  -- H1: Empathy density in chronic vs acute posts --")
+    log.info("\n  -- H1: Sentiment score in chronic vs acute posts --")
 
-    chronic_emp = df.loc[df["severity"] == "chronic", empathy_col].dropna()
-    acute_emp   = df.loc[df["severity"] == "acute",   empathy_col].dropna()
+    chronic_sent = df.loc[df["severity"] == "chronic", sentiment_col].dropna()
+    acute_sent   = df.loc[df["severity"] == "acute",   sentiment_col].dropna()
 
-    u_stat, p_mw = stats.mannwhitneyu(chronic_emp, acute_emp, alternative="greater")
+    u_stat, p_mw = stats.mannwhitneyu(chronic_sent, acute_sent, alternative="less")
     # Rank-biserial correlation as effect size
-    r_rb = 1 - (2 * u_stat) / (len(chronic_emp) * len(acute_emp))
+    r_rb = 1 - (2 * u_stat) / (len(chronic_sent) * len(acute_sent))
 
-    log.info(f"  Chronic  –  mean={chronic_emp.mean():.4f}, median={chronic_emp.median():.4f}, n={len(chronic_emp)}")
-    log.info(f"  Acute    –  mean={acute_emp.mean():.4f}, median={acute_emp.median():.4f}, n={len(acute_emp)}")
+    log.info(f"  Chronic  –  mean={chronic_sent.mean():.4f}, median={chronic_sent.median():.4f}, n={len(chronic_sent)}")
+    log.info(f"  Acute    –  mean={acute_sent.mean():.4f}, median={acute_sent.median():.4f}, n={len(acute_sent)}")
     log.info(f"  Mann-Whitney U={u_stat:.1f}, p={p_mw:.4f}, effect size (r_rb)={r_rb:.4f}")
     log.info(f"  H1 → {'SUPPORTED' if p_mw < ALPHA else 'NOT SUPPORTED'} (α={ALPHA})")
 
@@ -362,11 +362,11 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
 
     # H1 results text file
     with open(rq1_dir / "h1_results.txt", "w", encoding="utf-8") as f:
-        f.write("H1: Empathy phrase density higher in chronic (more severe) posts than acute posts\n\n")
-        f.write(f"Chronic: mean={chronic_emp.mean():.4f}, median={chronic_emp.median():.4f}, n={len(chronic_emp)}\n")
-        f.write(f"Acute:   mean={acute_emp.mean():.4f}, median={acute_emp.median():.4f}, n={len(acute_emp)}\n")
+        f.write("H1: Chronic condition posts show lower sentiment than acute condition posts\n\n")
+        f.write(f"Chronic: mean={chronic_sent.mean():.4f}, median={chronic_sent.median():.4f}, n={len(chronic_sent)}\n")
+        f.write(f"Acute:   mean={acute_sent.mean():.4f}, median={acute_sent.median():.4f}, n={len(acute_sent)}\n")
         f.write(f"Mann-Whitney U = {u_stat:.1f}\n")
-        f.write(f"p-value        = {p_mw:.4f}  (one-tailed, chronic > acute)\n")
+        f.write(f"p-value        = {p_mw:.4f}  (one-tailed, chronic < acute)\n")
         f.write(f"Effect size    = {r_rb:.4f}  (rank-biserial r; |r| > 0.1 small, > 0.3 medium, > 0.5 large)\n")
         f.write(f"Result         = {'SUPPORTED' if p_mw < ALPHA else 'NOT SUPPORTED'} at α={ALPHA}\n")
 
@@ -389,9 +389,9 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     plt.close()
 
     # ─────────────────────────────────────────────────────────────────────────
-    # H2: Correlation comparison in chronic posts
+    # H2: Preference for empathy over accuracy in chronic posts
     # ─────────────────────────────────────────────────────────────────────────
-    log.info("\n  -- H2: Correlation with sentiment in chronic posts --")
+    log.info("\n  -- H2: Empathy vs accuracy preference in chronic posts --")
 
     chronic_df = df[df["severity"] == "chronic"].copy()
 
@@ -423,7 +423,7 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         log.info(f"  H2 → {'SUPPORTED' if h2_ok else 'NOT SUPPORTED'}"
                  f" (empathy r={emp_r:.4f} vs clarity r={cla_r:.4f}, accuracy r={acc_r:.4f})")
         with open(rq1_dir / "h2_results.txt", "w", encoding="utf-8") as f:
-            f.write("H2: Empathy more strongly correlated with positive sentiment than clarity/accuracy (chronic posts)\n\n")
+            f.write("H2: Chronic patients prefer empathetic communication over technical accuracy (chronic posts)\n\n")
             for _, row in corr_df.iterrows():
                 sig = "*" if row["significant"] else "n.s."
                 f.write(f"  {row['metric']:25s}: r={row['spearman_r']:.4f}, p={row['p_value']:.4f} {sig}\n")
