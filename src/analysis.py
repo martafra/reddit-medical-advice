@@ -1,5 +1,5 @@
 """
-analysis.py  –  CS7IS4 / Text Analytics – Group 10
+analysis.py  -  CS7IS4 / Text Analytics - Group 10
 
 Analyses LDA topic-modelling and K-Means clustering outputs to answer
 three Research Questions and test the associated hypotheses.
@@ -72,14 +72,14 @@ NATURE_MAP = {
 }
 
 # --- Additional phrase lists (extends features.py; used in RQ1 H2) ----------
-# Clarity phrases – language indicating the advice was well communicated
+# Clarity phrases - language indicating the advice was well communicated
 CLARITY_PHRASES = [
     "clearly explained", "easy to understand", "makes sense", "well explained",
     "straightforward", "easy to follow", "very clear", "so clear",
     "clearly stated", "concise", "understandable",
 ]
 
-# Accuracy phrases – language indicating the advice was factually sound
+# Accuracy phrases - language indicating the advice was factually sound
 ACCURACY_PHRASES = [
     "accurate", "correct", "factually", "evidence based", "evidence-based",
     "proven", "verified", "credible", "reliable source", "backed by",
@@ -126,7 +126,6 @@ def _phrase_density(text: str, phrases: list) -> float:
 def add_extra_features(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
     """Adds clarity_density, accuracy_density (RQ1 H2) and word_count (RQ3 H2). Other features come pre-computed from features.py."""
     t = df[text_col].fillna("")
-    log.info("  Adding clarity_density and accuracy_density...")
     df["clarity_density"]  = t.apply(lambda x: _phrase_density(x, CLARITY_PHRASES))
     df["accuracy_density"] = t.apply(lambda x: _phrase_density(x, ACCURACY_PHRASES))
     df["word_count"]       = t.apply(lambda x: len(str(x).split()))
@@ -272,7 +271,7 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
       clarity_density, accuracy_density
     """
     if medical_df.empty:
-        log.warning("RQ1: medical_df is empty – skipping")
+        log.warning("RQ1: medical_df is empty - skipping")
         return
 
     rq1_dir = output_dir / "rq1"
@@ -280,9 +279,8 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
 
     log.info("\nRQ1: severity and nature analysis")
 
-    # filter to medical categories and add severity/nature labels
     if "category" not in medical_df.columns:
-        log.warning("  RQ1: 'category' column not found – cannot label severity. Skipping.")
+        log.warning("  RQ1: 'category' column not found - cannot label severity. Skipping.")
         return
 
     df = medical_df[medical_df["category"].isin(SEVERITY_MAP)].copy()
@@ -298,12 +296,10 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     empathy_col   = "empathy_score"   if "empathy_score"   in df.columns else None
 
     if empathy_col is None:
-        log.warning("  empathy_score column not found – RQ1 H1 cannot be tested")
+        log.warning("  empathy_score column not found - RQ1 H1 cannot be tested")
         return
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # H1: Sentiment score  –  chronic vs acute (chronic expected lower)
-    # ─────────────────────────────────────────────────────────────────────────
+    # H1: Sentiment score  -  chronic vs acute (chronic expected lower)
     log.info("\n  -- H1: Sentiment score in chronic vs acute posts --")
 
     chronic_sent = df.loc[df["severity"] == "chronic", sentiment_col].dropna()
@@ -313,12 +309,11 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     # Rank-biserial correlation as effect size
     r_rb = 1 - (2 * u_stat) / (len(chronic_sent) * len(acute_sent))
 
-    log.info(f"  Chronic  –  mean={chronic_sent.mean():.4f}, median={chronic_sent.median():.4f}, n={len(chronic_sent)}")
-    log.info(f"  Acute    –  mean={acute_sent.mean():.4f}, median={acute_sent.median():.4f}, n={len(acute_sent)}")
+    log.info(f"  Chronic  -  mean={chronic_sent.mean():.4f}, median={chronic_sent.median():.4f}, n={len(chronic_sent)}")
+    log.info(f"  Acute    -  mean={acute_sent.mean():.4f}, median={acute_sent.median():.4f}, n={len(acute_sent)}")
     log.info(f"  Mann-Whitney U={u_stat:.1f}, p={p_mw:.4f}, effect size (r_rb)={r_rb:.4f}")
     log.info(f"  H1 → {'SUPPORTED' if p_mw < ALPHA else 'NOT SUPPORTED'} (α={ALPHA})")
 
-    # Group stats table (severity × nature)
     group_stats = (
         df.groupby(["severity", "nature"])
         .agg(
@@ -331,9 +326,7 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         .reset_index()
     )
     group_stats.to_csv(rq1_dir / "h1_group_stats.csv", index=False)
-    log.info(f"\n  Group stats:\n{group_stats.to_string(index=False)}")
 
-    # H1 results text file
     with open(rq1_dir / "h1_results.txt", "w", encoding="utf-8") as f:
         f.write("H1: Chronic condition posts show lower sentiment than acute condition posts\n\n")
         f.write(f"Chronic: mean={chronic_sent.mean():.4f}, median={chronic_sent.median():.4f}, n={len(chronic_sent)}\n")
@@ -343,7 +336,6 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         f.write(f"Effect size    = {r_rb:.4f}  (rank-biserial r; |r| > 0.1 small, > 0.3 medium, > 0.5 large)\n")
         f.write(f"Result         = {'SUPPORTED' if p_mw < ALPHA else 'NOT SUPPORTED'} at α={ALPHA}\n")
 
-    # Boxplot: empathy and sentiment by severity × nature
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     for ax, col, title in zip(
         axes,
@@ -354,16 +346,14 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
             data=df, x="severity", y=col, hue="nature",
             palette="muted", ax=ax, order=["chronic", "acute"],
         )
-        ax.set_title(f"RQ1 H1 – {title}")
+        ax.set_title(f"RQ1 H1 - {title}")
         ax.set_xlabel("Severity")
         ax.set_ylabel(col)
     plt.tight_layout()
     plt.savefig(rq1_dir / "h1_boxplots.png", dpi=150)
     plt.close()
 
-    # ─────────────────────────────────────────────────────────────────────────
     # H2: Preference for empathy over accuracy in chronic posts
-    # ─────────────────────────────────────────────────────────────────────────
     log.info("\n  -- H2: Empathy vs accuracy preference in chronic posts --")
 
     chronic_df = df[df["severity"] == "chronic"].copy()
@@ -376,7 +366,7 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     corr_rows = []
     for label, col in metrics.items():
         if col not in chronic_df.columns:
-            log.warning(f"  Column '{col}' not found – skipping")
+            log.warning(f"  Column '{col}' not found - skipping")
             continue
         r, p = safe_spearman(chronic_df[col], chronic_df[sentiment_col])
         corr_rows.append({"metric": label, "column": col,
@@ -387,7 +377,6 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     corr_df = pd.DataFrame(corr_rows)
     corr_df.to_csv(rq1_dir / "h2_correlations.csv", index=False)
 
-    # H2 verdict: is empathy r > both clarity r and accuracy r?
     if len(corr_df) == 3:
         emp_r  = corr_df.loc[corr_df["metric"] == "empathy_score",    "spearman_r"].values[0]
         cla_r  = corr_df.loc[corr_df["metric"] == "clarity_density",  "spearman_r"].values[0]
@@ -402,13 +391,12 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
                 f.write(f"  {row['metric']:25s}: r={row['spearman_r']:.4f}, p={row['p_value']:.4f} {sig}\n")
             f.write(f"\nResult = {'SUPPORTED' if h2_ok else 'NOT SUPPORTED'} at α={ALPHA}\n")
 
-    # Correlation bar chart
     if not corr_df.empty:
         fig, ax = plt.subplots(figsize=(8, 5))
         colors = ["#4A72B0" if m == "empathy_score" else "#AABDD4" for m in corr_df["metric"]]
         bars   = ax.bar(corr_df["metric"], corr_df["spearman_r"], color=colors)
         ax.axhline(0, color="black", linewidth=0.8)
-        ax.set_title("RQ1 H2 – Correlation with Positive Sentiment (Chronic Posts Only)")
+        ax.set_title("RQ1 H2 - Correlation with Positive Sentiment (Chronic Posts Only)")
         ax.set_ylabel("Spearman r")
         labels = ["Empathy +\nSupport", "Clarity", "Accuracy"]
         ax.set_xticks(range(len(corr_df)))
@@ -423,7 +411,6 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         plt.savefig(rq1_dir / "h2_correlation_bars.png", dpi=150)
         plt.close()
 
-    # Scatter: empathy vs sentiment, chronic vs acute side by side
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     for ax, sev, color in zip(axes, ["chronic", "acute"], ["#4A72B0", "#E06C4A"]):
         grp = df[df["severity"] == sev]
@@ -442,7 +429,6 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     plt.savefig(rq1_dir / "h2_scatter_plots.png", dpi=150)
     plt.close()
 
-    # Per-topic empathy summary (if LDA topics available)
     if "dominant_topic" in df.columns:
         topic_agg = (
             df.groupby(["dominant_topic", "severity"])
@@ -454,7 +440,6 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
         )
         topic_agg.to_csv(rq1_dir / "empathy_by_topic_severity.csv", index=False)
 
-    # Per-cluster empathy summary (if clusters available)
     if "cluster" in df.columns:
         cluster_agg = (
             df.groupby(["cluster", "severity"])
@@ -478,7 +463,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     so full-data p-values are meaningless — we use median effect size instead).
     """
     if df.empty:
-        log.warning(f"RQ2 ({label}): dataframe is empty – skipping")
+        log.warning(f"RQ2 ({label}): dataframe is empty - skipping")
         return
 
     rq2_dir = output_dir / "rq2"
@@ -486,18 +471,16 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
 
     log.info(f"\n  -- RQ2 ({label}): Shared Experience vs Sentiment Score --")
 
-    # Column aliases
     se_col   = "shared_experience" if "shared_experience" in df.columns else None
     sent_col = "sentiment_score"   if "sentiment_score"   in df.columns else "vader_compound"
 
     if se_col is None:
-        log.warning(f"  RQ2 ({label}): 'shared_experience' column missing – skipping")
+        log.warning(f"  RQ2 ({label}): 'shared_experience' column missing - skipping")
         return
     if sent_col not in df.columns:
-        log.warning(f"  RQ2 ({label}): sentiment column ('{sent_col}') missing – skipping")
+        log.warning(f"  RQ2 ({label}): sentiment column ('{sent_col}') missing - skipping")
         return
 
-    # Split into two groups
     with_sent    = df.loc[df[se_col] == 1, sent_col].dropna()
     without_sent = df.loc[df[se_col] == 0, sent_col].dropna()
 
@@ -508,13 +491,13 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
              f"(imbalance ratio {imbalance_ratio:.0f}:1)")
 
     if n_with < 2 or n_without < 2:
-        log.warning(f"  RQ2 ({label}): insufficient data for group comparison – skipping")
+        log.warning(f"  RQ2 ({label}): insufficient data for group comparison - skipping")
         return
 
     # full-data descriptive statistics
-    log.info(f"  WITH    – mean={with_sent.mean():.4f}, median={with_sent.median():.4f}, "
+    log.info(f"  WITH    - mean={with_sent.mean():.4f}, median={with_sent.median():.4f}, "
              f"std={with_sent.std():.4f}, n={n_with}")
-    log.info(f"  WITHOUT – mean={without_sent.mean():.4f}, median={without_sent.median():.4f}, "
+    log.info(f"  WITHOUT - mean={without_sent.mean():.4f}, median={without_sent.median():.4f}, "
              f"std={without_sent.std():.4f}, n={n_without}")
 
     # full-data Mann-Whitney U (p is inflated by large n, treat as descriptive only)
@@ -579,7 +562,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     log.info(f"  H -> {'SUPPORTED' if supported else 'NOT SUPPORTED'}  "
              f"(r_rb>{EFFECT_THRESHOLD}, correct direction, >=70% bootstrap trials sig)")
 
-    # save numerical results
     results = pd.DataFrame([{
         "corpus":                       label,
         "n_with_shared_exp":            int(n_with),
@@ -605,9 +587,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         "hypothesis_supported":         supported,
     }])
     results.to_csv(rq2_dir / f"results_{label}.csv", index=False)
-    log.info(f"  Results saved -> {rq2_dir / f'results_{label}.csv'}")
 
-    # human-readable result file
     with open(rq2_dir / f"h_results_{label}.txt", "w", encoding="utf-8") as f:
         f.write("H: Comments with shared-experience phrases have higher positive sentiment\n\n")
         f.write(f"Corpus: {label}\n")
@@ -647,7 +627,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
                 f"{'PASS' if pct_sig >= 70.0 else 'FAIL'} ({pct_sig:.1f}%)\n\n")
         f.write(f"Result: {'SUPPORTED' if supported else 'NOT SUPPORTED'} at alpha={ALPHA}\n")
 
-    # violin/box plot: sentiment split by shared_experience
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
     plot_df = df[[se_col, sent_col]].dropna().copy()
@@ -659,7 +638,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         lambda g: g.sample(min(len(g), MAX_PLOT), random_state=42)
     )
 
-    # Violin
     sns.violinplot(
         data=plot_sample, x="Shared Experience", y=sent_col,
         palette={"Yes": "#4A72B0", "No": "#AABDD4"},
@@ -691,7 +669,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     plt.savefig(rq2_dir / f"violin_{label}.png", dpi=150)
     plt.close()
 
-    # bootstrap distribution plot
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
     axes[0].hist(r_rb_vals, bins=40, color="#4A72B0", edgecolor="white", linewidth=0.4)
@@ -712,7 +689,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     plt.savefig(rq2_dir / f"bootstrap_{label}.png", dpi=150)
     plt.close()
 
-    # per-topic breakdown (if LDA topics available)
     if "dominant_topic" in df.columns:
         topic_agg = (
             df.groupby("dominant_topic")
@@ -730,7 +706,6 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         )
         topic_agg.to_csv(rq2_dir / f"by_topic_{label}.csv", index=False)
 
-    # per-cluster breakdown
     if "cluster" in df.columns:
         cluster_agg = (
             df.groupby("cluster")
@@ -766,7 +741,6 @@ def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
             log.warning(f"  RQ2-H2 ({label}): column '{col}' missing - skipping")
             return
 
-    # Drop rows where either column is NaN
     pair = df[[ud_col, ld_col]].dropna()
     n    = len(pair)
     log.info(f"  Valid pairs for correlation: {n:,}")
@@ -787,12 +761,10 @@ def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     log.info(f"  lexical_density     - mean={pair[ld_col].mean():.4f}, "
              f"std={pair[ld_col].std():.4f}")
 
-    # Verdict: r negative AND one-tailed p < alpha
     supported = (r_sp < 0) and (p_one < ALPHA)
     log.info(f"  H2 -> {'SUPPORTED' if supported else 'NOT SUPPORTED'} "
              f"(r<0 and one-tailed p<{ALPHA})")
 
-    # Save numerical results
     results = pd.DataFrame([{
         "corpus":               label,
         "n":                    int(n),
@@ -804,9 +776,7 @@ def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         "hypothesis_supported": supported,
     }])
     results.to_csv(rq2_dir / f"h2_results_{label}.csv", index=False)
-    log.info(f"  Results saved -> {rq2_dir / f'h2_results_{label}.csv'}")
 
-    # Human-readable result file
     with open(rq2_dir / f"h2_results_{label}.txt", "w", encoding="utf-8") as f:
         f.write("H2: uncertainty_density is negatively correlated with lexical_density "
                 "in advice comments\n\n")
@@ -825,7 +795,6 @@ def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         f.write(f"(r={'negative' if r_sp < 0 else 'positive'}, "
                 f"one-tailed p={'<' if p_one < ALPHA else '>='} alpha)\n")
 
-    # Scatter plot with regression line
     MAX_PLOT = 30_000
     plot_df  = pair.sample(min(n, MAX_PLOT), random_state=42)
 
@@ -873,7 +842,7 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
     log.info("\n  -- RQ3 H1: LDA Topic Overlap (Medical vs Non-Medical) --")
 
     if _is_placeholder(medical_words_csv) or _is_placeholder(nonmedical_words_csv):
-        log.warning("  RQ3 H1: Placeholder paths – skipping topic overlap analysis")
+        log.warning("  RQ3 H1: Placeholder paths - skipping topic overlap analysis")
         return
 
     med_df    = pd.read_csv(medical_words_csv)
@@ -890,7 +859,6 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
     med_ids     = sorted(med_sets)
     nonmed_ids  = sorted(nonmed_sets)
 
-    # Jaccard similarity matrix
     sim_matrix = np.array([
         [jaccard(med_sets[m], nonmed_sets[n]) for n in nonmed_ids]
         for m in med_ids
@@ -900,7 +868,6 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
     sim_df.columns.name = "nonmedical_topic"
     sim_df.to_csv(rq3_dir / "topic_similarity_matrix.csv")
 
-    # Best match per medical topic
     best_matches = []
     for i, mid in enumerate(med_ids):
         j_best    = int(sim_matrix[i].argmax())
@@ -914,7 +881,6 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
         })
     best_df = pd.DataFrame(best_matches)
     best_df.to_csv(rq3_dir / "topic_best_matches.csv", index=False)
-    log.info(f"\n{best_df.to_string(index=False)}")
 
     mean_sim = float(sim_matrix.max(axis=1).mean())
     OVERLAP_THRESHOLD = 0.10   # Jaccard > 0.1 suggests meaningful word overlap
@@ -930,20 +896,18 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
         f.write(f"Threshold for 'generalisation': {OVERLAP_THRESHOLD}\n")
         f.write(f"Result: {'SUPPORTED' if supported else 'NOT SUPPORTED'}\n")
 
-    # Heatmap
     fig_w = max(8, len(nonmed_ids) * 1.1)
     fig_h = max(6, len(med_ids) * 0.8)
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     sns.heatmap(sim_df, annot=True, fmt=".2f", cmap="Blues", ax=ax,
                 linewidths=0.5, cbar_kws={"label": "Jaccard Similarity"})
-    ax.set_title(f"RQ3 H1 – Topic Similarity: Medical vs Non-Medical\n"
+    ax.set_title(f"RQ3 H1 - Topic Similarity: Medical vs Non-Medical\n"
                  f"(top-{TOP_WORDS_FOR_SIMILARITY} words, mean best-match={mean_sim:.3f})")
     ax.set_xlabel("Non-Medical Topic")
     ax.set_ylabel("Medical Topic")
     plt.tight_layout()
     plt.savefig(rq3_dir / "h1_topic_similarity_heatmap.png", dpi=150)
     plt.close()
-    log.info(f"  Heatmap saved → {rq3_dir / 'h1_topic_similarity_heatmap.png'}")
 
 
 def rq3_correlation_generalisation(medical_df: pd.DataFrame,
@@ -951,7 +915,7 @@ def rq3_correlation_generalisation(medical_df: pd.DataFrame,
                                    output_dir: Path):
     """Spearman correlations (sentiment vs word_count and uncertainty_density) in both corpora. Fisher's Z-test checks if they differ."""
     if medical_df.empty or nonmedical_df.empty:
-        log.warning("RQ3 H2: one or both dataframes empty – skipping")
+        log.warning("RQ3 H2: one or both dataframes empty - skipping")
         return
 
     rq3_dir = output_dir / "rq3"
@@ -965,11 +929,11 @@ def rq3_correlation_generalisation(medical_df: pd.DataFrame,
     rows = []
     for corpus_label, df in [("medical", medical_df), ("non_medical", nonmedical_df)]:
         if sent_col not in df.columns:
-            log.warning(f"  {corpus_label}: '{sent_col}' not found – skipping")
+            log.warning(f"  {corpus_label}: '{sent_col}' not found - skipping")
             continue
         for feat in features:
             if feat not in df.columns:
-                log.warning(f"  {corpus_label}: '{feat}' not found – skipping")
+                log.warning(f"  {corpus_label}: '{feat}' not found - skipping")
                 continue
             r, p = safe_spearman(df[feat], df[sent_col])
             rows.append({
@@ -1031,7 +995,6 @@ def rq3_correlation_generalisation(medical_df: pd.DataFrame,
                 f.write(f"  Fisher Z={fr[0]['fisher_z']}, p={fr[0]['fisher_p']}\n")
                 f.write(f"  Generalises: {fr[0]['generalises']}\n\n")
 
-    # Grouped bar chart
     if not results_df.empty:
         fig, axes = plt.subplots(1, len(features), figsize=(6 * len(features), 5))
         if len(features) == 1:
@@ -1052,7 +1015,7 @@ def rq3_correlation_generalisation(medical_df: pd.DataFrame,
                         row.spearman_r + offset,
                         f"r={row.spearman_r:.3f}\n{sig_str}",
                         ha="center", va="bottom", fontsize=9)
-        plt.suptitle("RQ3 H2 – Do Correlations Generalise to Non-Medical Posts?")
+        plt.suptitle("RQ3 H2 - Do Correlations Generalise to Non-Medical Posts?")
         plt.tight_layout()
         plt.savefig(rq3_dir / "h2_correlation_bars.png", dpi=150)
         plt.close()
@@ -1078,7 +1041,6 @@ def main():
                                      CLUSTER_COMMENTS_DOCS)
 
     # step 3: RQ1
-    log.info("\nRQ1: severity and nature of medical conditions")
     rq1_analysis(medical_df, OUTPUT_DIR)
 
     # step 4: RQ2 (run on all three corpora)
