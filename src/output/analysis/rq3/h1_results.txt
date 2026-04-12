@@ -1,6 +1,0 @@
-H1: Medical LDA topics re-emerge in non-medical posts
-
-Method: Jaccard similarity on top-20 words per topic
-Mean best-match similarity: 0.2344
-Threshold for 'generalisation': 0.1
-Result: SUPPORTED

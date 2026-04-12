@@ -22,9 +22,9 @@ from collections import Counter
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 POSTS_CSV    = "output/reddit_posts.csv"
 COMMENTS_CSV = "output/reddit_comments.csv"
 PLOTS_DIR    = Path("output/eda_plots")
@@ -65,9 +65,9 @@ def save_fig(name: str):
     log.info(f"  Plot saved: {path}")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # LOAD DATA
-# ---------------------------------------------------------------------------
+# ---
 section("LOADING DATA")
 log.info("Loading posts...")
 posts = pd.read_csv(POSTS_CSV, parse_dates=["created_utc"])
@@ -81,9 +81,9 @@ info(f"Post columns:    {list(posts.columns)}")
 info(f"Comment columns: {list(comments.columns)}")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 1. BASIC STATISTICS
-# ---------------------------------------------------------------------------
+# ---
 section("1. BASIC STATISTICS")
 
 posts["text_len"]   = posts["text"].str.len()
@@ -114,9 +114,9 @@ info(f"\nPost score - mean: {posts['score'].mean():.1f}, median: {posts['score']
 info(f"Comment score - mean: {comments['score'].mean():.1f}, median: {comments['score'].median():.0f}")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 2. DISTRIBUTION BY CATEGORY AND SUBREDDIT
-# ---------------------------------------------------------------------------
+# ---
 section("2. DISTRIBUTION BY CATEGORY AND SUBREDDIT")
 
 cat_dist = posts["category"].value_counts()
@@ -147,9 +147,9 @@ axes[1].invert_yaxis()
 save_fig("01_distribution_category_subreddit")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 3. TEXT LENGTH DISTRIBUTION
-# ---------------------------------------------------------------------------
+# ---
 section("3. TEXT LENGTH DISTRIBUTION")
 
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -185,9 +185,9 @@ ax.tick_params(axis="x", rotation=20)
 save_fig("03_wordcount_by_category")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 4. TEMPORAL DISTRIBUTION
-# ---------------------------------------------------------------------------
+# ---
 section("4. TEMPORAL DISTRIBUTION")
 
 posts["year_month"] = posts["created_utc"].dt.to_period("M")
@@ -207,9 +207,9 @@ plt.xticks(rotation=45)
 save_fig("04_temporal_distribution")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 5. CONDITION FREQUENCY
-# ---------------------------------------------------------------------------
+# ---
 section("5. MEDICAL CONDITION FREQUENCY")
 
 posts["text_lower"] = posts["text"].str.lower().fillna("")
@@ -238,9 +238,9 @@ for bar in ax.patches:
 save_fig("05_condition_frequency")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 6. COMMENT TYPE DISTRIBUTION
-# ---------------------------------------------------------------------------
+# ---
 section("6. COMMENT TYPE DISTRIBUTION (RQ2)")
 
 ct_dist = comments["comment_type"].value_counts()
@@ -277,9 +277,9 @@ axes[1].legend(title="Type", bbox_to_anchor=(1.01, 1), loc="upper left")
 save_fig("06_comment_type_distribution")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 7. INCONSISTENCY FLAGS
-# ---------------------------------------------------------------------------
+# ---
 section("7. INCONSISTENCY FLAGS")
 
 short_posts = posts[posts["word_count"] < 20]
@@ -308,9 +308,9 @@ info(f"Comments per post - mean: {comments_per_post.mean():.1f}, "
      f"max: {comments_per_post.max()}")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # 8. CROSS-USER ANALYSIS (RQ2 setup)
-# ---------------------------------------------------------------------------
+# ---
 section("8. CROSS-USER ANALYSIS")
 
 medical_cats    = ["chronic_mental", "chronic_physical", "acute_mental", "acute_physical"]
@@ -329,9 +329,9 @@ crossover_posts = posts[posts["author"].isin(crossover)]
 info(f"Posts from authors in both contexts: {len(crossover_posts):,}")
 
 
-# ---------------------------------------------------------------------------
+# ---
 # SAVE REPORT
-# ---------------------------------------------------------------------------
+# ---
 REPORT_PATH.write_text("\n".join(report_lines), encoding="utf-8")
 log.info(f"\nReport saved to: {REPORT_PATH}")
 log.info(f"Plots saved to:  {PLOTS_DIR}/")

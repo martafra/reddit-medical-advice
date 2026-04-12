@@ -43,9 +43,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
+# ---
 # CONFIGURATION
-# ---------------------------------------------------------------------------
+# ---
 POSTS_CSV    = "output/reddit_posts_features.csv"
 COMMENTS_CSV = "output/reddit_comments_features.csv"
 OUTPUT_DIR   = Path("output/clustering")
@@ -72,9 +72,9 @@ RANDOM_STATE  = 42
 N_WORDS_PER_CLUSTER = 15   # top words to show per cluster
 
 
-# ---------------------------------------------------------------------------
+# ---
 # HELPER: build TF-IDF + LSA pipeline
-# ---------------------------------------------------------------------------
+# ---
 def build_tfidf_matrix(texts: list[str]) -> tuple:
     """TF-IDF + SVD (LSA). Returns the reduced matrix, vectorizer, svd model, and raw tfidf matrix."""
     log.info("  Building TF-IDF matrix...")
@@ -98,9 +98,9 @@ def build_tfidf_matrix(texts: list[str]) -> tuple:
     return X, vectorizer, svd, tfidf_matrix
 
 
-# ---------------------------------------------------------------------------
+# ---
 # HELPER: elbow + silhouette search
-# ---------------------------------------------------------------------------
+# ---
 def find_optimal_clusters(X: np.ndarray, cluster_range,
                           label: str, output_dir: Path) -> int:
     """Tries each cluster count, picks the K with the highest silhouette score."""
@@ -148,9 +148,9 @@ def find_optimal_clusters(X: np.ndarray, cluster_range,
     return best_k
 
 
-# ---------------------------------------------------------------------------
+# ---
 # HELPER: get top TF-IDF words for each cluster
-# ---------------------------------------------------------------------------
+# ---
 def get_cluster_top_words(km_model, vectorizer, n_words: int) -> dict[int, list[str]]:
     """Top n_words per cluster based on centroid weights in TF-IDF space."""
     feature_names = vectorizer.get_feature_names_out()
@@ -163,9 +163,9 @@ def get_cluster_top_words(km_model, vectorizer, n_words: int) -> dict[int, list[
     return top_words
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN PIPELINE FOR ONE CORPUS
-# ---------------------------------------------------------------------------
+# ---
 def run_clustering(df: pd.DataFrame, label: str, id_col: str,
                    output_dir: Path, lda_csv: str = None):
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -273,9 +273,9 @@ def run_clustering(df: pd.DataFrame, label: str, id_col: str,
     return df
 
 
-# ---------------------------------------------------------------------------
+# ---
 # MAIN
-# ---------------------------------------------------------------------------
+# ---
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -2,8 +2,8 @@
 venv/
 
 # Output data
-# output/
-
+output/
+src/output
 # Python cache
 __pycache__/
 *.pyc

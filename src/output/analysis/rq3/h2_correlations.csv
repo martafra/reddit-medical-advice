@@ -1,5 +1,0 @@
-corpus,feature,spearman_r,p_value,n,significant
-medical,word_count,-0.3024,0.0,12121,True
-medical,uncertainty_density,-0.0453,0.0,12121,True
-non_medical,word_count,0.0262,0.0587,5218,False
-non_medical,uncertainty_density,0.0465,0.0008,5218,True

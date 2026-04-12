@@ -35,9 +35,7 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 log = logging.getLogger(__name__)
 
-# =============================================================================
-# SECTION 0 – CONFIGURATION  (fill in paths before running)
-# =============================================================================
+# --- CONFIGURATION (fill in paths before running) ---
 
 # --- LDA outputs (one set per corpus) ----------------------------------------
 LDA_MEDICAL_DOCS         = "../Output - Reddit/lda/medical_posts/documents_with_topics.csv"
@@ -94,9 +92,7 @@ TOP_WORDS_FOR_SIMILARITY = 20
 # Significance threshold
 ALPHA = 0.05
 
-# =============================================================================
-# SECTION 1 – UTILITIES
-# =============================================================================
+# --- UTILITIES ---
 
 def _is_placeholder(path: str) -> bool:
     return path == "PLACEHOLDER" or not Path(path).exists()
@@ -128,16 +124,7 @@ def _phrase_density(text: str, phrases: list) -> float:
 
 
 def add_extra_features(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
-    """
-    Add features not already in features.py:
-      - clarity_density, accuracy_density  (RQ1 H2)
-      - word_count                          (RQ3 H2)
-
-    Columns already computed by features.py and present in documents_with_topics.csv:
-      sentiment_score, empathy_score, shared_experience,
-      advice_acceptance, uncertainty_density
-    are used as-is and are NOT recomputed here.
-    """
+    """Adds clarity_density, accuracy_density (RQ1 H2) and word_count (RQ3 H2). Other features come pre-computed from features.py."""
     t = df[text_col].fillna("")
     log.info("  Adding clarity_density and accuracy_density...")
     df["clarity_density"]  = t.apply(lambda x: _phrase_density(x, CLARITY_PHRASES))
@@ -147,10 +134,7 @@ def add_extra_features(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
 
 
 def load_and_prepare(docs_csv: str, label: str, cluster_docs_csv: str = None) -> pd.DataFrame:
-    """
-    Load a documents CSV (LDA or clustering output), compute fresh VADER sentiment,
-    add extra phrase features, and optionally merge cluster assignments.
-    """
+    """Load a documents CSV, add extra features, optionally merge cluster assignments."""
     if _is_placeholder(docs_csv):
         log.warning(f"  Skipping '{label}': path not set or file not found ({docs_csv})")
         return pd.DataFrame()
@@ -200,9 +184,7 @@ def safe_spearman(x: pd.Series, y: pd.Series) -> tuple:
     return round(float(r), 4), round(float(p), 4)
 
 
-# =============================================================================
-# SECTION 2 – TOPIC AND CLUSTER NAMING
-# =============================================================================
+# --- TOPIC AND CLUSTER NAMING ---
 
 def _auto_name(top_words: list) -> str:
     """Join the first 3 words with underscores as an auto-generated topic label."""
@@ -210,10 +192,7 @@ def _auto_name(top_words: list) -> str:
 
 
 def generate_naming_file(words_csv: str, id_col: str, out_path: Path):
-    """
-    Read a topic_words.csv or cluster_words.csv, auto-generate names,
-    and save a CSV that the user can edit to add manual names.
-    """
+    """Auto-generates topic/cluster names from top words and saves a CSV for manual editing."""
     if _is_placeholder(words_csv):
         log.warning(f"  Skipping naming file for {out_path.name}: path not set")
         return
@@ -253,9 +232,7 @@ def save_all_naming_files(output_dir: Path):
     """Generate topic/cluster naming CSVs for all six word files."""
     naming_dir = output_dir / "naming"
     naming_dir.mkdir(parents=True, exist_ok=True)
-    log.info(f"\n{'='*55}")
-    log.info("STEP 1: Generating topic / cluster naming files")
-    log.info(f"{'='*55}")
+    log.info("\nGenerating topic/cluster naming files...")
 
     configs = [
         (LDA_MEDICAL_WORDS,        "topic_id",   "lda_medical_topics.csv"),
@@ -272,9 +249,7 @@ def save_all_naming_files(output_dir: Path):
     log.info("    then re-run to apply your names throughout the analysis.\n")
 
 
-# =============================================================================
-# SECTION 3 – RQ1: SEVERITY AND NATURE ANALYSIS
-# =============================================================================
+# --- RQ1: SEVERITY AND NATURE ---
 
 def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     """
@@ -303,11 +278,9 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     rq1_dir = output_dir / "rq1"
     rq1_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info(f"\n{'='*55}")
-    log.info("STEP 3: RQ1 – Severity and Nature Analysis")
-    log.info(f"{'='*55}")
+    log.info("\nRQ1: severity and nature analysis")
 
-    # ── Prepare: filter to medical categories and add severity/nature labels ──
+    # filter to medical categories and add severity/nature labels
     if "category" not in medical_df.columns:
         log.warning("  RQ1: 'category' column not found – cannot label severity. Skipping.")
         return
@@ -496,37 +469,13 @@ def rq1_analysis(medical_df: pd.DataFrame, output_dir: Path):
     log.info(f"\n  RQ1 outputs → {rq1_dir}")
 
 
-# =============================================================================
-# SECTION 4 – RQ2: SHARED EXPERIENCE AND SENTIMENT
-# =============================================================================
+# --- RQ2: SHARED EXPERIENCE AND SENTIMENT ---
 
 def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     """
-    RQ2: Do comments containing 'shared experience' phrases show higher positive
-         sentiment scores than comments without such language?
-
-    H: Comments containing shared-experience phrases ('in my case', 'same thing
-       happened to me', etc.) will have significantly higher positive sentiment
-       scores than those without, indicating that relatable advice is framed more
-       positively.
-
-    The groups are highly imbalanced (WITH << WITHOUT).  At such scales, p-values
-    from full-data tests collapse to ~0 even for trivial effects.  We therefore
-    run N_BOOTSTRAP size-matched iterations (random subsamples of WITHOUT equal in
-    size to WITH) and base the primary verdict on median effect size (r_rb, Cohen's d)
-    and the fraction of bootstrap trials that are individually significant.
-
-    Primary Test – Bootstrapped Mann-Whitney U (one-tailed, size-matched):
-        N_BOOTSTRAP random samples of size n_with drawn from WITHOUT group.
-        Verdict: median r_rb > EFFECT_THRESHOLD AND correct direction.
-
-    Secondary – Full-data descriptives + Welch t-test (reported, p treated as
-        informational only because n is very large).
-
-    Effect sizes: rank-biserial r (Mann-Whitney) and Cohen's d (t-test).
-
-    Input columns used (from features.py):
-        shared_experience (binary 0/1), sentiment_score / vader_compound
+    Tests whether posts with shared-experience phrases have higher sentiment scores.
+    Uses bootstrapped size-matched Mann-Whitney (WITH/WITHOUT groups are very imbalanced,
+    so full-data p-values are meaningless — we use median effect size instead).
     """
     if df.empty:
         log.warning(f"RQ2 ({label}): dataframe is empty – skipping")
@@ -562,26 +511,20 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         log.warning(f"  RQ2 ({label}): insufficient data for group comparison – skipping")
         return
 
-    # ── Full-data descriptive statistics ──────────────────────────────────────
+    # full-data descriptive statistics
     log.info(f"  WITH    – mean={with_sent.mean():.4f}, median={with_sent.median():.4f}, "
              f"std={with_sent.std():.4f}, n={n_with}")
     log.info(f"  WITHOUT – mean={without_sent.mean():.4f}, median={without_sent.median():.4f}, "
              f"std={without_sent.std():.4f}, n={n_without}")
 
-    # ── Full-data Mann-Whitney U (informational only — p is inflated by large n) ─
+    # full-data Mann-Whitney U (p is inflated by large n, treat as descriptive only)
     u_stat_full, p_mw_full = stats.mannwhitneyu(with_sent, without_sent, alternative="greater")
     r_rb_full = 1 - (2 * u_stat_full) / (n_with * n_without)
     log.info(f"  [Full data] Mann-Whitney U={u_stat_full:.1f}, p={p_mw_full:.4e}, "
              f"r_rb={r_rb_full:.4f}  <- p inflated by large n, treat as descriptive only")
 
-    # ── Bootstrapped downsampling of the majority (WITHOUT) group ─────────────
-    #
-    #   The WITHOUT group is potentially 50x larger than WITH.  At this scale
-    #   every test produces p ≈ 0 even for trivial effect sizes.  We instead
-    #   draw N_BOOTSTRAP random samples of size n_with from WITHOUT, run the
-    #   same tests on each balanced pair, and report medians.  This gives
-    #   reliable, size-matched effect-size estimates.
-    #
+    # bootstrapped downsampling: WITHOUT is potentially 50x larger than WITH,
+    # so we draw N_BOOTSTRAP size-matched samples and report median effect sizes
     N_BOOTSTRAP = 500
     rng = np.random.default_rng(seed=42)
 
@@ -621,7 +564,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
              f"MW p={med_p_mw:.4f}, t-test p={med_p_t:.4f}")
     log.info(f"  % bootstrap trials significant (MW p < {ALPHA}): {pct_sig:.1f}%")
 
-    # ── Full-data Cohen's d (for reference; pooled SD biased by large n) ──────
+    # full-data Cohen's d (for reference; pooled SD biased by large n)
     pooled_std_full = np.sqrt(
         ((n_with - 1) * with_sent.std() ** 2 + (n_without - 1) * without_sent.std() ** 2)
         / (n_with + n_without - 2)
@@ -629,19 +572,14 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     cohens_d_full = ((with_sent.mean() - without_sent.mean()) / pooled_std_full
                      if pooled_std_full > 0 else float("nan"))
 
-    # ── Hypothesis verdict: effect size + consistent direction ────────────────
-    #   With n up to 3.6 M, p-values are meaningless as a sole criterion.
-    #   Verdict is based on:
-    #     (1) bootstrapped median r_rb > 0.05  (small but non-trivial effect)
-    #     (2) correct direction  (WITH mean > WITHOUT mean)
-    #     (3) >= 70% of bootstrap trials are individually significant
+    # verdict: effect size + consistent direction (p-values alone useless at this n)
     EFFECT_THRESHOLD  = 0.05
     correct_direction = float(with_sent.mean()) > float(without_sent.mean())
     supported = (med_r_rb > EFFECT_THRESHOLD) and correct_direction and (pct_sig >= 70.0)
     log.info(f"  H -> {'SUPPORTED' if supported else 'NOT SUPPORTED'}  "
              f"(r_rb>{EFFECT_THRESHOLD}, correct direction, >=70% bootstrap trials sig)")
 
-    # ── Save numerical results ────────────────────────────────────────────────
+    # save numerical results
     results = pd.DataFrame([{
         "corpus":                       label,
         "n_with_shared_exp":            int(n_with),
@@ -669,7 +607,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     results.to_csv(rq2_dir / f"results_{label}.csv", index=False)
     log.info(f"  Results saved -> {rq2_dir / f'results_{label}.csv'}")
 
-    # ── Write human-readable result file ─────────────────────────────────────
+    # human-readable result file
     with open(rq2_dir / f"h_results_{label}.txt", "w", encoding="utf-8") as f:
         f.write("H: Comments with shared-experience phrases have higher positive sentiment\n\n")
         f.write(f"Corpus: {label}\n")
@@ -709,7 +647,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
                 f"{'PASS' if pct_sig >= 70.0 else 'FAIL'} ({pct_sig:.1f}%)\n\n")
         f.write(f"Result: {'SUPPORTED' if supported else 'NOT SUPPORTED'} at alpha={ALPHA}\n")
 
-    # ── Violin / box plot: sentiment split by shared_experience ───────────────
+    # violin/box plot: sentiment split by shared_experience
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
     plot_df = df[[se_col, sent_col]].dropna().copy()
@@ -753,7 +691,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     plt.savefig(rq2_dir / f"violin_{label}.png", dpi=150)
     plt.close()
 
-    # ── Bootstrap distribution plot ───────────────────────────────────────────
+    # bootstrap distribution plot
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
     axes[0].hist(r_rb_vals, bins=40, color="#4A72B0", edgecolor="white", linewidth=0.4)
@@ -774,7 +712,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     plt.savefig(rq2_dir / f"bootstrap_{label}.png", dpi=150)
     plt.close()
 
-    # ── Per-topic breakdown (if LDA topics available) ─────────────────────────
+    # per-topic breakdown (if LDA topics available)
     if "dominant_topic" in df.columns:
         topic_agg = (
             df.groupby("dominant_topic")
@@ -792,7 +730,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
         )
         topic_agg.to_csv(rq2_dir / f"by_topic_{label}.csv", index=False)
 
-    # ── Per-cluster breakdown ─────────────────────────────────────────────────
+    # per-cluster breakdown
     if "cluster" in df.columns:
         cluster_agg = (
             df.groupby("cluster")
@@ -810,23 +748,7 @@ def rq2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
 
 
 def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
-    """
-    RQ2 H2: Is uncertainty_density negatively correlated with lexical_density
-            in advice comments?
-
-    Rationale: advisors who hedge with uncertain language ('perhaps', 'might',
-    'I'm not sure') may deliberately use simpler, less jargon-heavy vocabulary
-    to come across as more approachable and less authoritative.  A negative
-    Spearman correlation would support this.
-
-    Test: Spearman r between uncertainty_density and lexical_density.
-          One-tailed directional test: H1: r < 0 (negative relationship).
-
-    No class-imbalance issue: both variables are continuous density scores.
-
-    Input columns used (from features.py):
-        uncertainty_density, lexical_density
-    """
+    """Spearman r between uncertainty_density and lexical_density (one-tailed, expecting r < 0)."""
     if df.empty:
         log.warning(f"RQ2-H2 ({label}): dataframe is empty - skipping")
         return
@@ -934,9 +856,7 @@ def rq2_h2_analysis(df: pd.DataFrame, output_dir: Path, label: str):
     log.info(f"  RQ2-H2 ({label}) outputs -> {rq2_dir}")
 
 
-# =============================================================================
-# SECTION 5 – RQ3: GENERALISATION TO NON-MEDICAL
-# =============================================================================
+# --- RQ3: GENERALISATION TO NON-MEDICAL ---
 
 def jaccard(set1: set, set2: set) -> float:
     if not set1 or not set2:
@@ -946,13 +866,7 @@ def jaccard(set1: set, set2: set) -> float:
 
 def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
                       output_dir: Path):
-    """
-    RQ3 H1: The top-ranked LDA topics from medical posts will also emerge
-            in non-medical posts.
-
-    Method: Jaccard similarity on the top-N words of each topic pair.
-    A mean best-match similarity above the threshold suggests generalisation.
-    """
+    """Jaccard similarity on top-N words per topic pair. High mean = topics generalise."""
     rq3_dir = output_dir / "rq3"
     rq3_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1035,18 +949,7 @@ def rq3_topic_overlap(medical_words_csv: str, nonmedical_words_csv: str,
 def rq3_correlation_generalisation(medical_df: pd.DataFrame,
                                    nonmedical_df: pd.DataFrame,
                                    output_dir: Path):
-    """
-    RQ3 H2: Correlations between positive sentiment and (a) text length
-            and (b) uncertainty vocabulary density found in medical posts
-            also appear in non-medical posts.
-
-    Test: Spearman correlations computed independently for each corpus.
-    Generalisation check: same direction + both statistically significant.
-    Fisher's Z-test: formally compares the two correlation coefficients.
-
-    Input columns used (from features.py + extra):
-        sentiment_score / vader_compound, uncertainty_density, word_count
-    """
+    """Spearman correlations (sentiment vs word_count and uncertainty_density) in both corpora. Fisher's Z-test checks if they differ."""
     if medical_df.empty or nonmedical_df.empty:
         log.warning("RQ3 H2: one or both dataframes empty – skipping")
         return
@@ -1157,20 +1060,15 @@ def rq3_correlation_generalisation(medical_df: pd.DataFrame,
     log.info(f"\n  RQ3 outputs → {rq3_dir}")
 
 
-# =============================================================================
-# SECTION 6 – MAIN
-# =============================================================================
+# --- MAIN ---
 
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ── Step 1: Generate naming files ────────────────────────────────────────
+    # step 1: generate naming files
     save_all_naming_files(OUTPUT_DIR)
 
-    # ── Step 2: Load and prepare data ────────────────────────────────────────
-    log.info(f"\n{'='*55}")
-    log.info("STEP 2: Loading and preparing data")
-    log.info(f"{'='*55}")
+    # step 2: load and prepare data
 
     medical_df    = load_and_prepare(LDA_MEDICAL_DOCS,    "medical posts (LDA)",
                                      CLUSTER_MEDICAL_DOCS)
@@ -1179,66 +1077,27 @@ def main():
     comments_df   = load_and_prepare(LDA_COMMENTS_DOCS,   "comments (LDA)",
                                      CLUSTER_COMMENTS_DOCS)
 
-    # ── Step 3: RQ1 ──────────────────────────────────────────────────────────
-    log.info(f"\n{'='*55}")
-    log.info("STEP 3: RQ1 – Severity and Nature of Medical Conditions")
-    log.info(f"{'='*55}")
+    # step 3: RQ1
+    log.info("\nRQ1: severity and nature of medical conditions")
     rq1_analysis(medical_df, OUTPUT_DIR)
 
-    # ── Step 4: RQ2 (run on all three corpora) ───────────────────────────────
-    log.info(f"\n{'='*55}")
-    log.info("STEP 4: RQ2 – Shared Experience and Positive Sentiment")
-    log.info(f"{'='*55}")
+    # step 4: RQ2 (run on all three corpora)
+    log.info("\nRQ2: shared experience and sentiment")
     rq2_analysis(medical_df,    OUTPUT_DIR, label="medical")
     rq2_analysis(nonmedical_df, OUTPUT_DIR, label="non_medical")
     rq2_analysis(comments_df,   OUTPUT_DIR, label="comments")
 
-    log.info(f"\n{'='*55}")
-    log.info("STEP 4b: RQ2 H2 – Uncertainty vs Lexical Density")
-    log.info(f"{'='*55}")
+    log.info("\nRQ2 H2: uncertainty vs lexical density")
     rq2_h2_analysis(medical_df,    OUTPUT_DIR, label="medical")
     rq2_h2_analysis(nonmedical_df, OUTPUT_DIR, label="non_medical")
     rq2_h2_analysis(comments_df,   OUTPUT_DIR, label="comments")
 
-    # ── Step 5: RQ3 ──────────────────────────────────────────────────────────
-    log.info(f"\n{'='*55}")
-    log.info("STEP 5: RQ3 – Generalisation to Non-Medical Posts")
-    log.info(f"{'='*55}")
+    # step 5: RQ3
+    log.info("\nRQ3: generalisation to non-medical posts")
     rq3_topic_overlap(LDA_MEDICAL_WORDS, LDA_NONMEDICAL_WORDS, OUTPUT_DIR)
     rq3_correlation_generalisation(medical_df, nonmedical_df, OUTPUT_DIR)
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    log.info(f"\n{'='*55}")
-    log.info("ANALYSIS COMPLETE")
-    log.info(f"{'='*55}")
-    log.info("Output structure:")
-    log.info("  output/analysis/naming/                      topic and cluster naming CSVs (edit manual_name)")
-    log.info("  output/analysis/rq1/h1_group_stats.csv       empathy by severity x nature")
-    log.info("  output/analysis/rq1/h1_results.txt           H1 test result")
-    log.info("  output/analysis/rq1/h1_boxplots.png          empathy and sentiment boxplots")
-    log.info("  output/analysis/rq1/h2_correlations.csv      correlation table (chronic posts)")
-    log.info("  output/analysis/rq1/h2_results.txt           H2 test result")
-    log.info("  output/analysis/rq1/h2_correlation_bars.png")
-    log.info("  output/analysis/rq1/h2_scatter_plots.png")
-    log.info("  -- RQ2 H1: Shared experience -> higher positive sentiment --")
-    log.info("  output/analysis/rq2/results_<corpus>.csv     H1 test result (bootstrap MW + t-test)")
-    log.info("  output/analysis/rq2/h_results_<corpus>.txt   H1 human-readable result")
-    log.info("  output/analysis/rq2/violin_<corpus>.png      H1 violin + mean-bar plots")
-    log.info("  output/analysis/rq2/bootstrap_<corpus>.png   H1 bootstrap effect-size distributions")
-    log.info("  output/analysis/rq2/by_topic_<corpus>.csv")
-    log.info("  output/analysis/rq2/by_cluster_<corpus>.csv")
-    log.info("  -- RQ2 H2: uncertainty_density negatively correlated with lexical_density --")
-    log.info("  output/analysis/rq2/h2_results_<corpus>.csv  H2 Spearman result")
-    log.info("  output/analysis/rq2/h2_results_<corpus>.txt  H2 human-readable result")
-    log.info("  output/analysis/rq2/h2_scatter_<corpus>.png  H2 scatter plot")
-    log.info("  output/analysis/rq3/topic_similarity_matrix.csv")
-    log.info("  output/analysis/rq3/topic_best_matches.csv")
-    log.info("  output/analysis/rq3/h1_results.txt")
-    log.info("  output/analysis/rq3/h1_topic_similarity_heatmap.png")
-    log.info("  output/analysis/rq3/h2_correlations.csv")
-    log.info("  output/analysis/rq3/h2_fisher_tests.csv")
-    log.info("  output/analysis/rq3/h2_results.txt")
-    log.info("  output/analysis/rq3/h2_correlation_bars.png")
+    log.info("\nDone. Results in output/analysis/rq1/, rq2/, rq3/")
 
 
 if __name__ == "__main__":
